@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../../../../Downloads/industry_ready_scaffold/industry_ready/model_cards"
+		},
+		{
+			"path": "../../../../../../Downloads/industry_ready_scaffold/industry_ready/tests"
+		},
+		{
+			"path": "../../../../../../Downloads/industry_ready_scaffold/industry_ready/.github"
+		}
+	],
+	"settings": {}
+}
