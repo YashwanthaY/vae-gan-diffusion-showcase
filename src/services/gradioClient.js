@@ -1,6 +1,6 @@
 import { Client } from "@gradio/client";
 
-const SPACE_ID = "Yashwantha123/vae-gan-diffusion-demo";
+const SPACE_ID = "RAYS123/vae-gan-diffusion-demo";
 let clientPromise = null;
 let currentToken = null;
 

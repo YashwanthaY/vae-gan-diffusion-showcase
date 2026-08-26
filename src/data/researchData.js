@@ -1,9 +1,9 @@
 export const RESEARCH_PROJECT = {
   title: "Comparative Study of VAE, GAN, and Diffusion Models on CIFAR-10",
-  author: "Yashwantha",
-  githubUrl: "https://github.com/Yashwantha123/vae-gan-diffusion-study",
-  huggingFaceUrl: "https://huggingface.co/Yashwantha123/vae-gan-diffusion-study",
-  kaggleUrl: "https://www.kaggle.com/code/yashwanthagastya/vae-gan-diffusion-comparative-study",
+  author: "RAYS",
+  githubUrl: "https://github.com/RAYS123/vae-gan-diffusion-study",
+  huggingFaceUrl: "https://huggingface.co/RAYS123/vae-gan-diffusion-study",
+  kaggleUrl: "https://www.kaggle.com/code/RAYS/vae-gan-diffusion-comparative-study",
   dataset: "CIFAR-10 (32x32 RGB, 10 Classes)",
   compute: "Kaggle Notebooks (NVIDIA Tesla T4 GPU)",
   headlineResult: {
