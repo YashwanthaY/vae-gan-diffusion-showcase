@@ -7,6 +7,7 @@ import DomainGapSection from './components/DomainGapSection';
 import DebuggingJourney from './components/DebuggingJourney';
 import InteractivePlayground from './components/InteractivePlayground';
 import StatisticalLab from './components/StatisticalLab';
+import RoadmapSection from './components/RoadmapSection';
 import Footer from './components/Footer';
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
         <DebuggingJourney />
         <InteractivePlayground />
         <StatisticalLab />
+        <RoadmapSection />
       </main>
       <Footer />
     </div>

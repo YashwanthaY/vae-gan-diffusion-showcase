@@ -58,6 +58,9 @@ export default function Navbar({ activeModel, setActiveModel }) {
           <button onClick={() => scrollTo('statistical')} className="hover:text-cyan-400 transition-colors">
             Statistical Proofs
           </button>
+          <button onClick={() => scrollTo('roadmap')} className="hover:text-cyan-400 transition-colors">
+            What's Next
+          </button>
         </nav>
 
         {/* External Badges & Model Selector Toggle */}

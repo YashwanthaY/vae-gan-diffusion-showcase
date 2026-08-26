@@ -220,3 +220,51 @@ export const CIFAR10_CLASSES = [
   "Airplane", "Automobile", "Bird", "Cat", "Deer",
   "Dog", "Frog", "Horse", "Ship", "Truck"
 ];
+
+export const ROADMAP_DATA = {
+  title: "What's Next",
+  subtitle: "This project is under active development — here's the roadmap.",
+  items: [
+    {
+      id: 1,
+      title: "Semantic Prompt Matching",
+      category: "Phase 1 · Near-Term",
+      badgeColor: "border-cyan-500/40 text-cyan-400 bg-cyan-500/10",
+      accentGlow: "hover:border-cyan-500/50 shadow-cyan-500/5",
+      numberColor: "bg-cyan-950 text-cyan-400 border-cyan-800/60",
+      tag: "CLIP Embeddings",
+      body: "Currently, typed prompts are matched to the model's 10 fixed categories using simple keyword matching. The next step swaps this for frozen CLIP embeddings, so prompts are matched by meaning instead of exact text — with zero retraining required for any of the three models."
+    },
+    {
+      id: 2,
+      title: "Unified Statistical Re-Evaluation",
+      category: "Phase 2 · In Progress",
+      badgeColor: "border-purple-500/40 text-purple-400 bg-purple-500/10",
+      accentGlow: "hover:border-purple-500/50 shadow-purple-500/5",
+      numberColor: "bg-purple-950 text-purple-400 border-purple-800/60",
+      tag: "FID / LPIPS / SSIM",
+      body: "A single, consistent evaluation protocol (FID, Inception Score, LPIPS, and SSIM) is being finalized across all three models, with proper significance testing across multiple random seeds — ensuring every comparison in this study is apples-to-apples."
+    },
+    {
+      id: 3,
+      title: "Text-Conditioned Generation",
+      category: "Phase 3 · Future Scope",
+      badgeColor: "border-amber-500/40 text-amber-400 bg-amber-500/10",
+      accentGlow: "hover:border-amber-500/50 shadow-amber-500/5",
+      numberColor: "bg-amber-950 text-amber-400 border-amber-800/60",
+      tag: "Cross-Attention UNet",
+      body: "CIFAR-10's 10 broad categories can't support free-text prompts like 'a red sports car' — that needs a captioned dataset and a larger architecture (a CLIP text encoder with cross-attention, similar to Stable Diffusion). Scoped as a future multi-month project."
+    },
+    {
+      id: 4,
+      title: "Generalization Testing",
+      category: "Phase 4 · Domain Transfer",
+      badgeColor: "border-emerald-500/40 text-emerald-400 bg-emerald-500/10",
+      accentGlow: "hover:border-emerald-500/50 shadow-emerald-500/5",
+      numberColor: "bg-emerald-950 text-emerald-400 border-emerald-800/60",
+      tag: "PathMNIST Benchmark",
+      body: "Testing whether the domain-gap findings from CIFAR-10 hold up on a different dataset entirely — a strong next candidate is PathMNIST, which would test generalization beyond natural images into a scientific imaging domain."
+    }
+  ]
+};
+
