@@ -376,7 +376,7 @@ export default function LiveModelApi() {
                       Live PyTorch Model Testing Console
                     </h3>
                     <p className="text-xs font-mono text-slate-400">
-                      Calls HuggingFace Space <code className="text-cyan-300">RAYS123/vae-gan-diffusion-demo</code> directly via REST client API.
+                      Calls HuggingFace Space <code className="text-cyan-300">Yashwantha123/vae-gan-diffusion-demo</code> directly via REST client API.
                     </p>
                   </div>
 
