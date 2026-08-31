@@ -16,7 +16,7 @@ export default function ModelComparison() {
     datasets: [
       {
         label: 'FID ↓ (Lower is Better)',
-        data: [123.28, 77.19, 10.03],
+        data: [null, 65.03, 10.03],
         backgroundColor: ['rgba(16, 185, 129, 0.75)', 'rgba(245, 158, 11, 0.75)', 'rgba(0, 243, 255, 0.85)'],
         borderColor: ['#10b981', '#f59e0b', '#00f3ff'],
         borderWidth: 2,

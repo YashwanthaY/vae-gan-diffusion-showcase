@@ -9,7 +9,7 @@ import { playClickSound, playModelSelectSound, playGenerationStartSound, playGen
 const STATIC_GALLERY = {
   vae: {
     title: 'β-VAE (Unconditional)',
-    fid: '123.28',
+    fid: 'Pending',
     isScore: '3.85',
     description: 'Continuous latent space representation. Tends toward smooth, softly blurred reconstructions due to the KL-divergence regularization penalty.',
     gridImg: '/assets/vae_grid.png',
@@ -19,7 +19,7 @@ const STATIC_GALLERY = {
   },
   gan: {
     title: 'WGAN-GP (Unconditional)',
-    fid: '77.19',
+    fid: '65.03',
     isScore: '4.95',
     description: 'Wasserstein GAN with Gradient Penalty. Produces sharper edges and high-contrast structural shapes, but exhibits occasional mode collapses on complex textures.',
     gridImg: '/assets/wgan_grid.png',
@@ -198,7 +198,7 @@ export default function LiveModelApi() {
                   : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
               }`}
             >
-              β-VAE (FID 123.28)
+              β-VAE (FID Pending)
             </button>
             <button
               onClick={() => handleTabChange('gan')}
@@ -208,7 +208,7 @@ export default function LiveModelApi() {
                   : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
               }`}
             >
-              WGAN-GP (FID 77.19)
+              WGAN-GP (FID 65.03)
             </button>
             <button
               onClick={() => handleTabChange('ddpm')}
@@ -234,7 +234,7 @@ export default function LiveModelApi() {
                     <div className="flex items-center justify-between text-xs font-mono">
                       <span className="font-bold text-emerald-400">β-VAE</span>
                       <span className="px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 text-[10px]">
-                        FID: 123.28
+                        FID: Pending
                       </span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed font-sans">
@@ -261,7 +261,7 @@ export default function LiveModelApi() {
                     <div className="flex items-center justify-between text-xs font-mono">
                       <span className="font-bold text-amber-400">WGAN-GP</span>
                       <span className="px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-500/30 text-[10px]">
-                        FID: 77.19
+                        FID: 65.03
                       </span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed font-sans">

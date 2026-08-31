@@ -23,8 +23,8 @@ export const MODELS_DATA = [
     badge: "Baseline Latent Model",
     color: "#10b981", // Emerald
     accentBg: "rgba(16, 185, 129, 0.1)",
-    fid: "123.28 ± 0.59",
-    fidNumeric: 123.28,
+    fid: "Pending re-eval",
+    fidNumeric: null,
     is: "3.85 ± 0.03",
     isNumeric: 3.85,
     parameters: "4.2M",
@@ -44,8 +44,8 @@ export const MODELS_DATA = [
     badge: "Adversarial Engine",
     color: "#f59e0b", // Amber
     accentBg: "rgba(245, 158, 11, 0.1)",
-    fid: "77.19 ± 0.54",
-    fidNumeric: 77.19,
+    fid: "65.03 ± 0.54",
+    fidNumeric: 65.03,
     is: "4.95 ± 0.05",
     isNumeric: 4.95,
     parameters: "9.8M",
@@ -118,7 +118,7 @@ optimizer_D = Adam(D.parameters(), lr=4e-4)
 optimizer_G = Adam(G.parameters(), lr=1e-4)
 N_CRITIC = 5
 
-// AFTER FIX (v3 Stable FID 77.19):
+// AFTER FIX (v3 Stable FID 65.03):
 optimizer_D = Adam(D.parameters(), lr=2e-4, betas=(0.5, 0.999))
 optimizer_G = Adam(G.parameters(), lr=1.5e-4, betas=(0.5, 0.999))
 N_CRITIC = 3`
