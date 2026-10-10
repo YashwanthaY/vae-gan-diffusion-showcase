@@ -1,22 +1,26 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart2, Layers, Zap, Clock, ShieldCheck, CheckCircle2, ChevronRight, Eye } from 'lucide-react';
+import { BarChart2, Eye, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
-import { MODELS_DATA } from '../data/researchData';
+import { MODELS_DATA, MODEL_METRICS, FID_DISCLAIMER } from '../data/researchData';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 export default function ModelComparison() {
-  const [selectedSampleTab, setSelectedSampleTab] = useState('all'); // 'all', 'ddpm'
+  const [selectedSampleTab, setSelectedSampleTab] = useState('all');
 
-  // Chart data for FID Lower is Better
+  // Chart data for FID (Lower is Better)
   const fidChartData = {
-    labels: ['β-VAE', 'WGAN-GP (v3)', 'DDPM (500 DDIM)'],
+    labels: ['β-VAE', 'WGAN-GP', 'DDPM (100-step DDIM)'],
     datasets: [
       {
-        label: 'FID ↓ (Lower is Better)',
-        data: [null, 65.03, 10.03],
+        label: 'FID ↓ (Lower is Better, N=5,000)',
+        data: [
+          MODEL_METRICS.vae.fid.mean,
+          MODEL_METRICS.wgan.fid.mean,
+          MODEL_METRICS.ddpm.fid.mean
+        ],
         backgroundColor: ['rgba(16, 185, 129, 0.75)', 'rgba(245, 158, 11, 0.75)', 'rgba(0, 243, 255, 0.85)'],
         borderColor: ['#10b981', '#f59e0b', '#00f3ff'],
         borderWidth: 2,
@@ -25,13 +29,17 @@ export default function ModelComparison() {
     ]
   };
 
-  // Chart data for Inception Score Higher is Better
+  // Chart data for Inception Score (Higher is Better)
   const isChartData = {
-    labels: ['β-VAE', 'WGAN-GP (v3)', 'DDPM (500 DDIM)'],
+    labels: ['β-VAE', 'WGAN-GP', 'DDPM (100-step DDIM)'],
     datasets: [
       {
-        label: 'Inception Score ↑ (Higher is Better)',
-        data: [3.85, 4.95, 9.44],
+        label: 'Inception Score ↑ (Higher is Better, N=5,000)',
+        data: [
+          MODEL_METRICS.vae.is.mean,
+          MODEL_METRICS.wgan.is.mean,
+          MODEL_METRICS.ddpm.is.mean
+        ],
         backgroundColor: ['rgba(16, 185, 129, 0.75)', 'rgba(245, 158, 11, 0.75)', 'rgba(0, 243, 255, 0.85)'],
         borderColor: ['#10b981', '#f59e0b', '#00f3ff'],
         borderWidth: 2,
@@ -84,8 +92,16 @@ export default function ModelComparison() {
             β-VAE vs WGAN-GP vs DDPM Benchmark
           </h2>
           <p className="text-slate-400 text-sm sm:text-base">
-            Evaluating pixel statistics (Fréchet Inception Distance & Inception Score) alongside parameter footprint and sampling speed across three core generative families.
+            Evaluating pixel statistics (Fréchet Inception Distance & Inception Score) alongside parameter footprint and sampling speed across three core generative families on CIFAR-10 over 5 evaluation seeds.
           </p>
+        </div>
+
+        {/* FID Protocol Disclaimer Alert */}
+        <div className="p-4 rounded-xl bg-cyan-950/40 border border-cyan-800/60 text-cyan-200 text-xs font-mono flex items-start space-x-3">
+          <AlertTriangle className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+          <div>
+            <strong className="text-cyan-300">FID Protocol Note:</strong> {FID_DISCLAIMER}
+          </div>
         </div>
 
         {/* Comparative Metric Bar Charts */}
@@ -96,13 +112,13 @@ export default function ModelComparison() {
                 <span>Fréchet Inception Distance (FID)</span>
                 <span className="text-xs font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/60">Lower is Better</span>
               </h3>
-              <span className="text-xs font-mono text-cyan-400 font-bold">DDPM = 10.03</span>
+              <span className="text-xs font-mono text-cyan-400 font-bold">DDPM = {MODEL_METRICS.ddpm.fid.formatted}</span>
             </div>
             <div className="h-64 w-full">
               <Bar data={fidChartData} options={chartOptions} />
             </div>
             <p className="text-xs text-slate-400 font-mono">
-              DDPM achieves a 7.7x FID improvement over WGAN-GP and 12.3x over β-VAE, demonstrating superior distribution alignment.
+              DDPM achieves {MODEL_METRICS.ddpm.fid.formatted} (9.9x lower FID than β-VAE and 21.4x lower than WGAN-GP which suffered mode collapse).
             </p>
           </div>
 
@@ -112,13 +128,13 @@ export default function ModelComparison() {
                 <span>Inception Score (IS)</span>
                 <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60">Higher is Better</span>
               </h3>
-              <span className="text-xs font-mono text-emerald-400 font-bold">DDPM = 9.44</span>
+              <span className="text-xs font-mono text-emerald-400 font-bold">DDPM = {MODEL_METRICS.ddpm.is.formatted}</span>
             </div>
             <div className="h-64 w-full">
               <Bar data={isChartData} options={chartOptions} />
             </div>
             <p className="text-xs text-slate-400 font-mono">
-              Inception Score confirms that DDPM generates high-confidence, class-distinct samples (9.44 out of theoretical maximum ~10 for CIFAR-10).
+              Inception Score confirms that DDPM generates class-distinct samples ({MODEL_METRICS.ddpm.is.formatted} out of CIFAR-10 evaluation scale).
             </p>
           </div>
         </div>
@@ -162,7 +178,7 @@ export default function ModelComparison() {
 
                 <div className="space-y-2 pt-2 border-t border-slate-800/80 text-xs font-mono">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">FID Score:</span>
+                    <span className="text-slate-400">FID Score (N=5k):</span>
                     <span className="font-bold text-white" style={{ color: model.color }}>{model.fid}</span>
                   </div>
                   <div className="flex justify-between">
@@ -170,12 +186,16 @@ export default function ModelComparison() {
                     <span className="font-bold text-slate-200">{model.is}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Sampling Speed:</span>
-                    <span className="text-slate-300">{model.samplingTime}</span>
+                    <span className="text-slate-400">LPIPS:</span>
+                    <span className="text-slate-300">{model.lpips}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Training Epochs:</span>
-                    <span className="text-slate-300">{model.epochs}</span>
+                    <span className="text-slate-400">SSIM:</span>
+                    <span className="text-slate-300">{model.ssim}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Sampling Speed:</span>
+                    <span className="text-slate-300">{model.samplingTime}</span>
                   </div>
                 </div>
               </div>
@@ -201,7 +221,7 @@ export default function ModelComparison() {
                 </h3>
               </div>
               <p className="text-xs sm:text-sm text-slate-400 font-mono mt-1">
-                Actual generated sample outputs from training checkpoints on CIFAR-10 (32x32 resolution)
+                Actual generated sample outputs from training checkpoints on CIFAR-10
               </p>
             </div>
 
@@ -237,12 +257,14 @@ export default function ModelComparison() {
                 src="/assets/model_comparison_grid.png"
                 alt="Model comparison grid β-VAE vs WGAN-GP vs DDPM"
                 className="w-full h-auto object-contain rounded-xl max-h-[500px]"
+                loading="lazy"
               />
             ) : (
               <img
                 src="/assets/ddpm_sample_grid.png"
-                alt="DDPM 500-step class conditional sample grid"
+                alt="DDPM 100-step class conditional sample grid"
                 className="w-full h-auto object-contain rounded-xl max-h-[500px]"
+                loading="lazy"
               />
             )}
 

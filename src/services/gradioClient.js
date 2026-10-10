@@ -48,11 +48,11 @@ export async function generateSingleModel({
 }) {
   const client = await getGradioClient(hfToken);
 
-  let archRadio = "DDPM — Best quality (FID 10.03, class-conditional)";
+  let archRadio = "DDPM (Class-Conditional - Best, FID 11.32)";
   if (architecture === "vae") {
-    archRadio = "β-VAE — trained to convergence (FID re-eval pending, unconditional)";
+    archRadio = "β-VAE (Unconditional, FID 112.24)";
   } else if (architecture === "gan") {
-    archRadio = "WGAN-GP — Moderate quality (FID 65.03, unconditional)";
+    archRadio = "WGAN-GP (Unconditional - Collapsed, FID 242.59)";
   }
 
   const result = await client.predict(1, [

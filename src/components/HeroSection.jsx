@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Activity, ArrowRight, CheckCircle2, ChevronRight, Database, Dna, ExternalLink, ShieldCheck, Zap } from 'lucide-react';
+import { Activity, ChevronRight, ExternalLink, Sparkles, AlertTriangle } from 'lucide-react';
 import ThreeCanvas from './ThreeCanvas';
-import { RESEARCH_PROJECT, MODELS_DATA } from '../data/researchData';
+import { RESEARCH_PROJECT, MODELS_DATA, MODEL_METRICS, DOWNSTREAM_FINAL, FID_DISCLAIMER } from '../data/researchData';
 
 export default function HeroSection({ activeModel, setActiveModel }) {
   const currentModelData = MODELS_DATA.find((m) => m.id === activeModel) || MODELS_DATA[2];
@@ -31,25 +31,25 @@ export default function HeroSection({ activeModel, setActiveModel }) {
           {/* Research Pill Badge */}
           <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-cyan-500/30 text-cyan-300 text-xs font-mono">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-            <span>Machine Learning Research & Downstream Domain-Gap Evaluation</span>
+            <span>Generative AI Research & Downstream Domain-Gap Study (CIFAR-10)</span>
           </div>
 
           {/* Main Title */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1]">
-            Comparative Study of <br />
+            Comparative Parametric Study of <br />
             <span className="bg-gradient-to-r from-emerald-400 via-amber-400 to-cyan-400 bg-clip-text text-transparent">
               β-VAE, WGAN-GP & DDPM
             </span>
           </h1>
 
           <p className="text-base sm:text-lg text-slate-300 max-w-2xl leading-relaxed">
-            A rigorous, multi-seed comparative benchmark on CIFAR-10 data generation. Evaluating beyond pixel metrics — testing if synthetic images hold up as training replacement data for downstream classifiers.
+            A rigorous 5-seed comparative benchmark on CIFAR-10 image generation. Evaluating distribution fidelity (FID, IS, LPIPS, SSIM) alongside downstream classifier utility under standardized protocols.
           </p>
 
-          {/* Interactive Model Architecture Selector Cards */}
+          {/* Interactive Model Selector Cards */}
           <div className="pt-2">
             <p className="text-xs font-mono text-slate-400 uppercase tracking-wider mb-2">
-              Select 3D Representation Model:
+              Select Generative Architecture Viewport:
             </p>
             <div className="grid grid-cols-3 gap-3">
               {MODELS_DATA.map((model) => (
@@ -67,7 +67,7 @@ export default function HeroSection({ activeModel, setActiveModel }) {
                       {model.name}
                     </span>
                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
-                      FID {model.fidNumeric}
+                      FID {model.fid}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
@@ -81,45 +81,52 @@ export default function HeroSection({ activeModel, setActiveModel }) {
           {/* Headline Results Banner */}
           <div className="p-4 rounded-2xl glass-card-ddpm border border-cyan-500/30 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <div className="text-xs text-slate-400 font-mono">Headline Achievement</div>
+              <div className="text-xs text-slate-400 font-mono">Headline Generative Model</div>
               <div className="text-xl font-bold text-cyan-300 flex items-center space-x-2">
-                <span>DDPM FID = 10.03</span>
+                <span>DDPM FID = {MODEL_METRICS.ddpm.fid.formatted}</span>
                 <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-700/60">
-                  {RESEARCH_PROJECT.headlineResult.fidGainVsGan} vs GAN
+                  Best Quality
                 </span>
               </div>
             </div>
             <div className="border-l border-slate-800 pl-4">
               <div className="text-xs text-slate-400 font-mono">Downstream Classifier Utility</div>
-              <div className="text-sm font-semibold text-emerald-400">
-                57.10% ± 0.91% (100% Synthetic)
+              <div className="text-sm font-semibold text-cyan-300">
+                500 real/class + 5k synth: {DOWNSTREAM_FINAL.metrics.real_500pc_plus_synth.mean}%
               </div>
-              <div className="text-[11px] text-slate-400 font-mono">Matches 58.93% Real Baseline</div>
+              <div className="text-[11px] text-slate-400 font-mono">vs {DOWNSTREAM_FINAL.metrics.real_500pc_only.mean}% real-only baseline (+4.38% low-data benefit)</div>
             </div>
+          </div>
+
+
+          {/* FID Disclaimer */}
+          <div className="text-[11px] font-mono text-slate-400 flex items-center space-x-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <span>{FID_DISCLAIMER}</span>
           </div>
 
           {/* Action CTAs */}
           <div className="flex flex-wrap items-center gap-4 pt-2">
             <button
-              onClick={() => scrollTo('models')}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/25 transition-all flex items-center space-x-2"
+              onClick={() => scrollTo('live-api')}
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-extrabold text-sm shadow-lg shadow-cyan-500/25 transition-all flex items-center space-x-2"
             >
-              <span>Explore Benchmark Metrics</span>
-              <ChevronRight className="w-4 h-4" />
+              <Sparkles className="w-4 h-4" />
+              <span>Open Live Demo & Gallery</span>
             </button>
             <button
-              onClick={() => scrollTo('domain-gap')}
+              onClick={() => scrollTo('models')}
               className="px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-medium text-sm transition-all flex items-center space-x-2"
             >
-              <span>Domain Gap Test</span>
-              <Activity className="w-4 h-4 text-cyan-400" />
+              <span>Explore Benchmark Metrics</span>
+              <ChevronRight className="w-4 h-4 text-cyan-400" />
             </button>
             <a
-              href={RESEARCH_PROJECT.kaggleUrl}
+              href={RESEARCH_PROJECT.huggingFaceUrl}
               target="_blank"
               rel="noreferrer"
               className="p-3 rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-all"
-              title="Run on Kaggle"
+              title="Open Hugging Face Space"
             >
               <ExternalLink className="w-4 h-4" />
             </a>

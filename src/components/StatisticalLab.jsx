@@ -1,7 +1,6 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { ShieldCheck, CheckCircle2, AlertCircle, FileText, Database } from 'lucide-react';
-import { STATISTICAL_SIGNIFICANCE } from '../data/researchData';
+import { ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { STATISTICAL_SIGNIFICANCE, FID_DISCLAIMER } from '../data/researchData';
 
 export default function StatisticalLab() {
   return (
@@ -18,17 +17,17 @@ export default function StatisticalLab() {
             5-Seed Significance Testing & Hypothesis Validation
           </h2>
           <p className="text-slate-400 text-sm sm:text-base">
-            Ensuring observed performance gaps are statistically meaningful rather than artifacts of random seed variation.
+            Ensuring observed performance gaps are statistically meaningful across 5 evaluation seeds ($N=5,000$ images per seed).
           </p>
         </div>
 
-        {/* 5-Seed Metrics Table & Proofs */}
+        {/* 5-Seed Metrics Table */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
           {/* Seed Data Table */}
           <div className="lg:col-span-7 p-6 sm:p-8 rounded-3xl glass-panel border border-slate-800 space-y-6">
             <h3 className="font-heading font-bold text-xl text-white flex items-center justify-between">
-              <span>Multi-Seed Evaluation Across 5 Seeds</span>
+              <span>Multi-Seed FID Evaluation (5 Seeds)</span>
               <span className="text-xs font-mono text-cyan-400">100% Directional Consistency</span>
             </h3>
 
@@ -40,7 +39,7 @@ export default function StatisticalLab() {
                     <th className="py-3 px-3 text-emerald-400">β-VAE FID</th>
                     <th className="py-3 px-3 text-amber-400">WGAN-GP FID</th>
                     <th className="py-3 px-3 text-cyan-400">DDPM FID</th>
-                    <th className="py-3 px-3 text-right">Rank Order</th>
+                    <th className="py-3 px-3 text-right">Rank Order (Lower Best)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
@@ -52,7 +51,7 @@ export default function StatisticalLab() {
                       <td className="py-3.5 px-3 font-bold text-cyan-300">{row.ddpm}</td>
                       <td className="py-3.5 px-3 text-right">
                         <span className="px-2 py-0.5 rounded text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800">
-                          DDPM &lt; GAN &lt; VAE
+                          DDPM &lt; VAE &lt; GAN
                         </span>
                       </td>
                     </tr>
@@ -67,8 +66,12 @@ export default function StatisticalLab() {
                 <span>Paired t-Test Result: p &lt; 0.0001</span>
               </div>
               <p className="text-slate-400 text-[11px]">
-                The FID superiority of DDPM over WGAN-GP and VAE is statistically significant and cannot be explained by seed variance.
+                The FID superiority of DDPM over β-VAE and WGAN-GP is statistically significant across all 5 evaluation seeds ($p &lt; 0.0001$).
               </p>
+            </div>
+            
+            <div className="text-center text-xs font-mono text-slate-500 pt-1">
+              {FID_DISCLAIMER}
             </div>
           </div>
 
@@ -91,7 +94,7 @@ export default function StatisticalLab() {
               <ul className="text-xs font-mono text-slate-300 space-y-2">
                 <li className="flex items-center space-x-2">
                   <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
-                  <span>5,000 samples evaluated per metric run</span>
+                  <span>5,000 samples evaluated per metric run ($N=5,000$)</span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />

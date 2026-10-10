@@ -1,0 +1,72 @@
+{
+  "config": {
+    "epochs": 30,
+    "batch": 256,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "model": "ResNet-18 (CIFAR stem)",
+    "optimizer": "SGD nesterov, OneCycle max_lr 0.1, wd 5e-4",
+    "augmentation": "random crop(pad 4, reflect)+hflip",
+    "metric": "final-epoch top-1 on 10,000 CIFAR-10 test images"
+  },
+  "synthetic_per_class": 500,
+  "results": {
+    "real_full_50k": {
+      "mean": 93.57666666666667,
+      "std": 0.0680685928555377,
+      "runs": [
+        93.63,
+        93.5,
+        93.6
+      ]
+    },
+    "real_full_plus_synth": {
+      "mean": 94.11333333333333,
+      "std": 0.3073000705065545,
+      "runs": [
+        93.83,
+        94.44,
+        94.07
+      ]
+    },
+    "synthetic_only_500pc": {
+      "mean": 73.64,
+      "std": 0.38196858509568754,
+      "runs": [
+        73.21,
+        73.77,
+        73.94
+      ]
+    },
+    "real_500pc_only": {
+      "mean": 76.76333333333334,
+      "std": 1.340497420114388,
+      "runs": [
+        75.53,
+        78.19,
+        76.57
+      ]
+    },
+    "real_500pc_plus_synth": {
+      "mean": 81.14,
+      "std": 0.9945350672550467,
+      "runs": [
+        81.44,
+        81.95,
+        80.03
+      ]
+    },
+    "real_1000pc_only": {
+      "mean": 83.07,
+      "std": 0.2325940669922643,
+      "runs": [
+        83.28,
+        82.82,
+        83.11
+      ]
+    }
+  }
+}

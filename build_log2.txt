@@ -1,0 +1,129 @@
+﻿[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 2447 modules transformed.
+node.exe : [31mx[39m 
+Build failed in 5.93s
+At C:\Users\yashw\AppDa
+ta\Roaming\npm\npx.ps1:
+24 char:5
++     & "node$exe"  "$b
+asedir/node_modules/npm
+/bin/npx-cli.js" $args
++     ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo     
+         : 
+NotSpecified: ([3    
+1mx[39m Build failed  
+   in 5.93s:String) 
+[], R    emoteException
+    + 
+FullyQualifiedErrorI   
+ d : NativeCommandError
+ 
+[31merror during 
+build:
+[31msrc/components/Her
+oSection.jsx (5:55): "P
+ROVISIONAL_DOWNSTREAM" 
+is not exported by "src
+/data/researchData.js",
+ imported by "src/compo
+nents/HeroSection.jsx".
+[31m
+file: [36mD:/Major Pro
+ject/Vae-Gan_Frontend/F
+inal/src/components/Her
+oSection.jsx:5:55[31m
+[33m
+3: import { Activity, 
+ChevronRight, 
+ExternalLink, 
+Sparkles, 
+AlertTriangle } from 
+'lucide-react';
+4: import ThreeCanvas 
+from './ThreeCanvas';
+5: import { 
+RESEARCH_PROJECT, 
+MODELS_DATA, 
+MODEL_METRICS, PROVISIO
+NAL_DOWNSTREAM, 
+FID_DISCLAIMER } from 
+'../data/researc...
+                       
+                       
+            ^
+6: 
+7: export default 
+function HeroSection({ 
+activeModel, 
+setActiveModel }) {
+[31m
+    at getRollupError (
+file:///D:/Major%20Proj
+ect/Vae-Gan_Frontend/Fi
+nal/node_modules/rollup
+/dist/es/shared/parseAs
+t.js:317:41)
+    at error (file:///D
+:/Major%20Project/Vae-G
+an_Frontend/Final/node_
+modules/rollup/dist/es/
+shared/parseAst.js:313:
+42)
+    at Module.error (fi
+le:///D:/Major%20Projec
+t/Vae-Gan_Frontend/Fina
+l/node_modules/rollup/d
+ist/es/shared/node-entr
+y.js:17154:16)
+    at 
+Module.traceVariable (f
+ile:///D:/Major%20Proje
+ct/Vae-Gan_Frontend/Fin
+al/node_modules/rollup/
+dist/es/shared/node-ent
+ry.js:17587:29)
+    at ModuleScope.find
+Variable (file:///D:/Ma
+jor%20Project/Vae-Gan_F
+rontend/Final/node_modu
+les/rollup/dist/es/shar
+ed/node-entry.js:15177:
+39)
+    at FunctionScope.fi
+ndVariable (file:///D:/
+Major%20Project/Vae-Gan
+_Frontend/Final/node_mo
+dules/rollup/dist/es/sh
+ared/node-entry.js:5397
+:38)
+    at FunctionBodyScop
+e.findVariable (file://
+/D:/Major%20Project/Vae
+-Gan_Frontend/Final/nod
+e_modules/rollup/dist/e
+s/shared/node-entry.js:
+5397:38)
+    at 
+MemberExpression.bind (
+file:///D:/Major%20Proj
+ect/Vae-Gan_Frontend/Fi
+nal/node_modules/rollup
+/dist/es/shared/node-en
+try.js:7116:49)
+    at 
+ArrayExpression.bind (f
+ile:///D:/Major%20Proje
+ct/Vae-Gan_Frontend/Fin
+al/node_modules/rollup/
+dist/es/shared/node-ent
+ry.js:2542:28)
+    at Property.bind (f
+ile:///D:/Major%20Proje
+ct/Vae-Gan_Frontend/Fin
+al/node_modules/rollup/
+dist/es/shared/node-ent
+ry.js:2546:23)[39m

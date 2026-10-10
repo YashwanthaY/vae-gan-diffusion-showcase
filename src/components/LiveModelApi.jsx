@@ -1,37 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Sparkles, RefreshCw, AlertCircle, CheckCircle2, Clock, Image as ImageIcon, Sliders, ExternalLink, Zap, ShieldAlert, Key, Eye, ChevronDown, ChevronUp, Volume2, VolumeX } from 'lucide-react';
-import { CIFAR10_CLASSES, RESEARCH_PROJECT } from '../data/researchData';
+import { Play, Sparkles, RefreshCw, AlertCircle, CheckCircle2, Image as ImageIcon, ExternalLink, Zap, Key, ChevronDown, ChevronUp, Volume2, VolumeX, AlertTriangle } from 'lucide-react';
+import { CIFAR10_CLASSES, MODEL_METRICS, FID_DISCLAIMER } from '../data/researchData';
 import { generateSingleModel, generateCompareAll } from '../services/gradioClient';
-import { playClickSound, playModelSelectSound, playGenerationStartSound, playGenerationCompleteSound, toggleSound, isSoundEnabled } from '../services/soundEffects';
+import { playClickSound, playModelSelectSound, playGenerationStartSound, playGenerationCompleteSound, toggleSound } from '../services/soundEffects';
 
-// Pre-generated uniform 1:1 square static model gallery assets (Instant load, 0 API dependency)
 const STATIC_GALLERY = {
   vae: {
     title: 'β-VAE (Unconditional)',
-    fid: 'Pending',
-    isScore: '3.85',
-    description: 'Continuous latent space representation. Tends toward smooth, softly blurred reconstructions due to the KL-divergence regularization penalty.',
+    fid: MODEL_METRICS.vae.fid.formatted,
+    isScore: MODEL_METRICS.vae.is.formatted,
+    description: 'Continuous latent space representation. Tends toward smooth, softly blurred reconstructions due to pixel-space ELBO loss.',
     gridImg: '/assets/vae_grid.png',
     badgeColor: 'border-emerald-500/40 text-emerald-300 bg-emerald-950/40',
     cardClass: 'glass-card-vae',
     samplesCount: '16 Pre-Generated Samples (Square 4x4 Grid)'
   },
   gan: {
-    title: 'WGAN-GP (Unconditional)',
-    fid: '65.03',
-    isScore: '4.95',
-    description: 'Wasserstein GAN with Gradient Penalty. Produces sharper edges and high-contrast structural shapes, but exhibits occasional mode collapses on complex textures.',
+    title: 'WGAN-GP (Unconditional - Failure Case)',
+    fid: MODEL_METRICS.wgan.fid.formatted,
+    isScore: MODEL_METRICS.wgan.is.formatted,
+    description: 'Wasserstein GAN with Gradient Penalty. Suffered genuine mode collapse to repeated blob-like patterns across evaluation seeds (documented failure case).',
     gridImg: '/assets/wgan_grid.png',
     badgeColor: 'border-amber-500/40 text-amber-300 bg-amber-950/40',
     cardClass: 'glass-card-gan',
-    samplesCount: '16 Pre-Generated Samples (Square 4x4 Grid)'
+    samplesCount: '16 Pre-Generated Samples (Mode Collapse Grid)'
   },
   ddpm: {
     title: 'DDPM (Class-Conditional)',
-    fid: '10.03',
-    isScore: '9.44',
-    description: 'Denoising Diffusion Probabilistic Model with Classifier-Free Guidance (s=1.5) and 500 DDIM steps. Highest visual clarity and fidelity across all 10 CIFAR-10 classes.',
+    fid: MODEL_METRICS.ddpm.fid.formatted,
+    isScore: MODEL_METRICS.ddpm.is.formatted,
+    description: 'Denoising Diffusion Probabilistic Model with Classifier-Free Guidance (s=1.5) and 100 DDIM steps. Highest visual clarity across all 10 CIFAR-10 classes.',
     gridImg: '/assets/ddpm_grid.png',
     badgeColor: 'border-cyan-500/40 text-cyan-300 bg-cyan-950/40',
     cardClass: 'glass-card-ddpm',
@@ -40,11 +39,9 @@ const STATIC_GALLERY = {
 };
 
 export default function LiveModelApi() {
-  // Default tab selection for static gallery
-  const [activeGalleryTab, setActiveGalleryTab] = useState('compare'); // 'compare', 'vae', 'gan', 'ddpm'
+  const [activeGalleryTab, setActiveGalleryTab] = useState('compare');
   const [soundActive, setSoundActive] = useState(true);
 
-  // Live generation drawer state
   const [isLiveDrawerOpen, setIsLiveDrawerOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState('dog');
   const [ddpmPrompt, setDdpmPrompt] = useState('');
@@ -54,13 +51,11 @@ export default function LiveModelApi() {
   const [hfToken, setHfToken] = useState('');
   const [showTokenInput, setShowTokenInput] = useState(false);
 
-  // Live API execution states
   const [isLoading, setIsLoading] = useState(false);
   const [loadingTime, setLoadingTime] = useState(0);
   const [apiError, setApiError] = useState(false);
   const [liveResults, setLiveResults] = useState(null);
 
-  // Timer for ZeroGPU cold-start user feedback
   useEffect(() => {
     let timer = null;
     if (isLoading) {
@@ -138,16 +133,14 @@ export default function LiveModelApi() {
   return (
     <section id="live-api" className="py-20 relative bg-slate-950 border-t border-slate-900">
       
-      {/* Background ambient glow */}
       <div className="absolute top-1/3 right-10 w-96 h-96 bg-cyan-500/10 rounded-full filter blur-[140px] pointer-events-none" />
       <div className="absolute bottom-10 left-10 w-96 h-96 bg-purple-500/10 rounded-full filter blur-[140px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 relative z-10">
         
-        {/* Section Header with Sound Toggle */}
+        {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4 relative">
           
-          {/* Sound Toggle Button */}
           <div className="absolute top-0 right-0 sm:-right-10">
             <button
               onClick={handleSoundToggle}
@@ -164,20 +157,44 @@ export default function LiveModelApi() {
 
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-900 border border-cyan-500/40 text-cyan-300 text-xs font-mono">
             <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
-            <span>CIFAR-10 Model Showcase & Interactive Audio-Visual Tester</span>
+            <span>Instant Results Gallery & Live Demo Console</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
             Generated Model Sample Gallery
           </h2>
           <p className="text-slate-400 text-sm sm:text-base">
-            Explore pre-calculated uniform 1:1 square CIFAR-10 synthetic sample grids, or run custom live GPU inference with audio feedback.
+            Instant zero-GPU results gallery (view pre-calculated sample grids), or launch custom live generation via Hugging Face Space ZeroGPU API.
+          </p>
+
+          {/* Prominent Link to HuggingFace Space */}
+          <div className="pt-2">
+            <a
+              href="https://huggingface.co/spaces/Yashwantha123/vae-gan-diffusion-demo"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs font-mono transition-all shadow-lg shadow-cyan-500/20"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span>Open Full Live Hugging Face Space Demo</span>
+            </a>
+          </div>
+        </div>
+
+        {/* Demo Plan Banner */}
+        <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-mono text-slate-300 space-y-1">
+          <div className="font-bold text-cyan-300 flex items-center space-x-2">
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <span>Demo Access Plan:</span>
+          </div>
+          <p>
+            1. <strong>Results gallery (Instant, Zero-GPU):</strong> Browse pre-calculated sample grids below without using GPU quota.<br />
+            2. <strong>Live GPU Generation:</strong> Click the GPU Console button to request live inference on Hugging Face ZeroGPU (rate-limited).
           </p>
         </div>
 
-        {/* 1. DEFAULT STATIC GALLERY TABS (Loads instantly, zero API dependency, Uniform 1:1 aspect ratios) */}
+        {/* 1. INSTANT STATIC GALLERY */}
         <div className="space-y-8">
           
-          {/* Gallery Tab Selector */}
           <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl mx-auto">
             <button
               onClick={() => handleTabChange('compare')}
@@ -198,7 +215,7 @@ export default function LiveModelApi() {
                   : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
               }`}
             >
-              β-VAE (FID Pending)
+              β-VAE (FID 112.24)
             </button>
             <button
               onClick={() => handleTabChange('gan')}
@@ -208,7 +225,7 @@ export default function LiveModelApi() {
                   : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
               }`}
             >
-              WGAN-GP (FID 65.03)
+              WGAN-GP (FID 242.59 Collapsed)
             </button>
             <button
               onClick={() => handleTabChange('ddpm')}
@@ -218,23 +235,22 @@ export default function LiveModelApi() {
                   : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
               }`}
             >
-              DDPM (FID 10.03)
+              DDPM (FID 11.32)
             </button>
           </div>
 
-          {/* Static Gallery Display Container */}
           <div className="p-6 sm:p-8 rounded-3xl glass-panel border border-slate-800 space-y-6">
             
             {activeGalleryTab === 'compare' ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 
-                {/* VAE Static Uniform Card */}
+                {/* VAE */}
                 <div className="p-5 rounded-2xl glass-card-vae space-y-4 flex flex-col justify-between">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs font-mono">
                       <span className="font-bold text-emerald-400">β-VAE</span>
                       <span className="px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 text-[10px]">
-                        FID: Pending
+                        FID: {MODEL_METRICS.vae.fid.formatted}
                       </span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed font-sans">
@@ -247,6 +263,7 @@ export default function LiveModelApi() {
                         src={STATIC_GALLERY.vae.gridImg}
                         alt="β-VAE Static Square Sample Grid"
                         className="w-full h-full object-cover"
+                        loading="lazy"
                       />
                     </div>
                     <div className="text-[11px] text-slate-400 font-mono text-center">
@@ -255,13 +272,13 @@ export default function LiveModelApi() {
                   </div>
                 </div>
 
-                {/* GAN Static Uniform Card */}
+                {/* GAN */}
                 <div className="p-5 rounded-2xl glass-card-gan space-y-4 flex flex-col justify-between">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs font-mono">
-                      <span className="font-bold text-amber-400">WGAN-GP</span>
+                      <span className="font-bold text-amber-400">WGAN-GP (Collapsed)</span>
                       <span className="px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-500/30 text-[10px]">
-                        FID: 65.03
+                        FID: {MODEL_METRICS.wgan.fid.formatted}
                       </span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed font-sans">
@@ -274,21 +291,22 @@ export default function LiveModelApi() {
                         src={STATIC_GALLERY.gan.gridImg}
                         alt="WGAN-GP Static Square Sample Grid"
                         className="w-full h-full object-cover"
+                        loading="lazy"
                       />
                     </div>
-                    <div className="text-[11px] text-slate-400 font-mono text-center">
-                      16 Pre-Generated Samples (Unconditional)
+                    <div className="text-[11px] text-amber-400 font-mono text-center">
+                      Documented Mode Collapse Failure
                     </div>
                   </div>
                 </div>
 
-                {/* DDPM Static Uniform Card */}
+                {/* DDPM */}
                 <div className="p-5 rounded-2xl glass-card-ddpm space-y-4 flex flex-col justify-between">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs font-mono">
                       <span className="font-bold text-cyan-400">DDPM (Best Quality)</span>
                       <span className="px-2 py-0.5 rounded bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 text-[10px]">
-                        FID: 10.03
+                        FID: {MODEL_METRICS.ddpm.fid.formatted}
                       </span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed font-sans">
@@ -301,6 +319,7 @@ export default function LiveModelApi() {
                         src={STATIC_GALLERY.ddpm.gridImg}
                         alt="DDPM Static Square Sample Grid"
                         className="w-full h-full object-cover"
+                        loading="lazy"
                       />
                     </div>
                     <div className="text-[11px] text-cyan-300 font-mono text-center font-semibold">
@@ -311,7 +330,6 @@ export default function LiveModelApi() {
 
               </div>
             ) : (
-              /* Single Model Detailed Static Gallery Card */
               <div className="max-w-2xl mx-auto p-6 rounded-2xl glass-panel space-y-4 text-center">
                 <div className="flex items-center justify-between text-xs font-mono border-b border-slate-800 pb-3">
                   <span className="font-bold text-lg text-white">
@@ -334,16 +352,21 @@ export default function LiveModelApi() {
                     src={STATIC_GALLERY[activeGalleryTab].gridImg}
                     alt="Static Single Grid"
                     className="w-full h-full object-cover"
+                    loading="lazy"
                   />
                 </div>
               </div>
             )}
 
+            <div className="text-center text-xs font-mono text-slate-500 pt-2">
+              {FID_DISCLAIMER}
+            </div>
+
           </div>
 
         </div>
 
-        {/* 2. SECONDARY "GENERATE NEW LIVE SAMPLE" DRAWER & BUTTON */}
+        {/* 2. LIVE GPU CONSOLE */}
         <div className="space-y-6 pt-4">
           
           <div className="text-center">
@@ -356,7 +379,7 @@ export default function LiveModelApi() {
             >
               <Zap className="w-4 h-4 text-cyan-400 animate-pulse" />
               <span>
-                {isLiveDrawerOpen ? 'Close Live GPU Inference Console' : 'Test Live GPU Model Generation (HuggingFace ZeroGPU API)'}
+                {isLiveDrawerOpen ? 'Close Live GPU Inference Console' : 'Test Live GPU Model Generation (Hugging Face ZeroGPU API)'}
               </span>
               {isLiveDrawerOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -376,7 +399,7 @@ export default function LiveModelApi() {
                       Live PyTorch Model Testing Console
                     </h3>
                     <p className="text-xs font-mono text-slate-400">
-                      Calls HuggingFace Space <code className="text-cyan-300">Yashwantha123/vae-gan-diffusion-demo</code> directly via REST client API.
+                      Calls Hugging Face Space <code className="text-cyan-300">Yashwantha123/vae-gan-diffusion-demo</code> directly via REST API.
                     </p>
                   </div>
 
@@ -395,7 +418,7 @@ export default function LiveModelApi() {
                 {showTokenInput && (
                   <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2 text-xs font-mono">
                     <div className="flex justify-between items-center text-slate-300">
-                      <span>HuggingFace User Access Token (<code className="text-cyan-400">hf_...</code>):</span>
+                      <span>Hugging Face User Access Token (<code className="text-cyan-400">hf_...</code>):</span>
                       <a
                         href="https://huggingface.co/settings/tokens"
                         target="_blank"
@@ -523,12 +546,12 @@ export default function LiveModelApi() {
                   </button>
                 </div>
 
-                {/* Loading State Banner */}
+                {/* Loading Banner */}
                 {isLoading && (
                   <div className="p-5 rounded-2xl bg-cyan-950/40 border border-cyan-500/40 text-cyan-300 space-y-2">
                     <div className="flex items-center space-x-3 text-xs font-mono font-bold">
                       <RefreshCw className="w-4 h-4 animate-spin text-cyan-400" />
-                      <span>Sending request to HuggingFace ZeroGPU API ({loadingTime}s elapsed)...</span>
+                      <span>Sending request to Hugging Face ZeroGPU API ({loadingTime}s elapsed)...</span>
                     </div>
                     <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
                       <div
@@ -539,7 +562,7 @@ export default function LiveModelApi() {
                   </div>
                 )}
 
-                {/* Friendly Inline Error Message */}
+                {/* Error Banner */}
                 {apiError && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -549,16 +572,16 @@ export default function LiveModelApi() {
                     <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                     <div className="space-y-1">
                       <div className="font-bold text-sm font-heading">
-                        Live generation is at capacity right now — here are pre-generated examples above
+                        Live GPU quota reached — viewing instant static gallery above
                       </div>
                       <p className="text-slate-300">
-                        HuggingFace ZeroGPU free-tier daily quota limit is temporarily reached. You can view the full high-resolution pre-calculated model outputs in the gallery above!
+                        Hugging Face ZeroGPU free-tier quota is currently busy or limited. You can view pre-generated sample grids in the gallery above!
                       </p>
                     </div>
                   </motion.div>
                 )}
 
-                {/* Generated Live Output */}
+                {/* Live Output */}
                 {liveResults && !isLoading && !apiError && (
                   <div className="p-6 rounded-2xl glass-panel border border-slate-800 space-y-4">
                     <div className="flex items-center justify-between text-xs font-mono border-b border-slate-800 pb-3">
