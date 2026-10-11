@@ -4,7 +4,7 @@ export { MODEL_METRICS, STATISTICAL_TESTS, DOWNSTREAM_FINAL, FID_DISCLAIMER };
 
 export const RESEARCH_PROJECT = {
   title: "A Comparative Parametric Study of VAE, GAN, and Diffusion Models for High-Fidelity Synthetic Data Generation",
-  author: "Yashwantha Y",
+  author: "RAYS",
   githubUrl: "https://github.com/YashwanthaY/vae-gan-diffusion-showcase",
   huggingFaceUrl: "https://huggingface.co/spaces/Yashwantha123/vae-gan-diffusion-demo",
   kaggleUrl: "https://github.com/YashwanthaY/Vae-Gan-Diffusion-study",

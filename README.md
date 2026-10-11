@@ -94,7 +94,7 @@ _(single run, being confirmed over 3 seeds; auto-populated from `results/downstr
 
 ## 👨‍💻 Author
 
-**Yashwantha Y**  
+**RAYS**  
 - GitHub: [@YashwanthaY](https://github.com/YashwanthaY)  
 - HuggingFace: [@Yashwantha123](https://huggingface.co/Yashwantha123)
 
