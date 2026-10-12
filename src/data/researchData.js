@@ -14,7 +14,7 @@ export const RESEARCH_PROJECT = {
     bestModel: "DDPM (Class-Conditional, 100-step DDIM, CFG 1.5)",
     bestFid: `${MODEL_METRICS.ddpm.fid.mean} ± ${MODEL_METRICS.ddpm.fid.std}`,
     bestIs: `${MODEL_METRICS.ddpm.is.mean} ± ${MODEL_METRICS.ddpm.is.std}`,
-    fidGainVsGan: "21.4x lower FID than WGAN-GP",
+    fidGainVsGan: "21.4x lower FID than WGAN-GP",                  
     fidGainVsVae: "9.9x lower FID than β-VAE",
     downstreamAccuracy: `500 real/class + 5k synth reaches ${DOWNSTREAM_FINAL.metrics.real_500pc_plus_synth.mean}% vs ${DOWNSTREAM_FINAL.metrics.real_500pc_only.mean}% real-only baseline (+4.38% low-data benefit, 3 evaluation seeds)`,
     fidDisclaimer: FID_DISCLAIMER

@@ -14,9 +14,9 @@ export const FID_DISCLAIMER = "FID uses N=5,000 samples vs a 10,000-image CIFAR-
 
 export const MODEL_METRICS = {
   vae: {
-    name: "β-VAE",
-    fullName: "Variational Autoencoder (β-VAE)",
-    fid: { mean: 112.24, std: 0.52, formatted: "112.24 ± 0.52" },
+    name: "β-VAE",               
+    fullName: "Variational Autoencoder (β-VAE)",                                                   
+    fid: { mean: 112.24, std: 0.52, formatted: "112.24 ± 0.52" },                            
     is: { mean: 4.04, std: 0.07, formatted: "4.04 ± 0.07" },
     lpips: { mean: 0.2703, std: 0.0013, formatted: "0.2703 ± 0.0013" },
     ssim: { mean: 0.2276, std: 0.0014, formatted: "0.2276 ± 0.0014" },
