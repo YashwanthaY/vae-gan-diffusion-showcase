@@ -1,61 +1,10 @@
 import React, { useState } from 'react';
 import { Activity, AlertTriangle, HelpCircle, Layers } from 'lucide-react';
-import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import { DOMAIN_GAP_DATA } from '../data/researchData';
 import DownstreamAccuracy from './DownstreamAccuracy';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
-
 export default function DomainGapSection() {
   const [activeTsneTab, setActiveTsneTab] = useState('corrected');
-
-  // Accuracy Line Chart
-  const lineChartData = {
-    labels: ['0% (Real)', '25% Synth', '50% Synth', '75% Synth', '100% Synth'],
-    datasets: [
-      {
-        label: 'ResNet-18 Downstream Accuracy (%) [Preliminary 5k run]',
-        data: DOMAIN_GAP_DATA.multiSeedResults.map((r) => r.accuracyMean),
-        borderColor: '#10b981',
-        backgroundColor: 'rgba(16, 185, 129, 0.2)',
-        pointBackgroundColor: '#00f3ff',
-        pointBorderColor: '#ffffff',
-        pointRadius: 6,
-        tension: 0.2,
-        fill: true
-      }
-    ]
-  };
-
-  const lineChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        labels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 12 } }
-      },
-      tooltip: {
-        backgroundColor: '#0f172a',
-        titleColor: '#f8fafc',
-        bodyColor: '#34d399',
-        borderColor: '#10b981',
-        borderWidth: 1
-      }
-    },
-    scales: {
-      x: {
-        ticks: { color: '#94a3b8', font: { family: 'Outfit', size: 12 } },
-        grid: { color: 'rgba(255, 255, 255, 0.05)' }
-      },
-      y: {
-        min: 70,
-        max: 85,
-        ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 11 } },
-        grid: { color: 'rgba(255, 255, 255, 0.05)' }
-      }
-    }
-  };
 
   return (
     <section id="domain-gap" className="py-20 relative bg-slate-950 border-t border-slate-900">
@@ -77,78 +26,6 @@ export default function DomainGapSection() {
 
         {/* Dynamic Full-Data Downstream Accuracy Slot */}
         <DownstreamAccuracy />
-
-        {/* Multi-Seed Preliminary Downstream Classifier Results Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          
-          {/* Left Chart & Note */}
-          <div className="lg:col-span-7 p-6 rounded-2xl glass-panel border border-slate-800 space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-heading font-bold text-lg text-white">
-                  Synthetic Mixture vs Accuracy (5k Low-Data Experiment)
-                </h3>
-                <p className="text-xs text-slate-400 font-mono">
-                  3 evaluation seeds per mixture on held-out CIFAR-10 test set (mean ± std)
-                </p>
-              </div>
-              <span className="text-xs font-mono px-3 py-1 rounded-full bg-slate-900 text-cyan-300 border border-slate-800">
-                Low-Data 5k Subset
-              </span>
-            </div>
-
-            <div className="h-64 w-full">
-              <Line data={lineChartData} options={lineChartOptions} />
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 space-y-2 font-mono">
-              <div className="font-bold text-cyan-300">
-                Downstream Utility Benchmark Note:
-              </div>
-              <p className="leading-relaxed text-slate-300">
-                Synthetic images supplement limited real data (+4.38% gain in low-data setting: 76.76% &rarr; 81.14%, p=0.030), but cannot fully replace full 50,000-image real datasets (+0.54% gain on full data is within noise, p=0.13).
-              </p>
-            </div>
-          </div>
-
-          {/* Right Data Table */}
-          <div className="lg:col-span-5 p-6 rounded-2xl glass-panel border border-slate-800 space-y-4">
-            <h3 className="font-heading font-bold text-base text-white flex items-center justify-between">
-              <span>Preliminary Evaluation Table</span>
-              <span className="text-xs font-mono text-slate-400">ResNet-18 (5k subset)</span>
-            </h3>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-400">
-                    <th className="py-2.5 px-2">Synthetic %</th>
-                    <th className="py-2.5 px-2">Accuracy (Mean ± Std)</th>
-                    <th className="py-2.5 px-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {DOMAIN_GAP_DATA.multiSeedResults.map((row, idx) => (
-                    <tr key={idx} className={row.ratioNumeric === 100 ? 'bg-slate-900/60 font-bold' : ''}>
-                      <td className="py-3 px-2 text-slate-200">{row.syntheticRatio}</td>
-                      <td className="py-3 px-2 text-cyan-300">{row.accuracyMean.toFixed(2)}% ± {row.std.toFixed(2)}%</td>
-                      <td className="py-3 px-2">
-                        <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300">
-                          {row.label}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-400 font-mono">
-              Full-data evaluation results will populate dynamically above when execution finishes.
-            </div>
-          </div>
-
-        </div>
 
         {/* Schedule Bug Diagnosis */}
         <div className="p-6 sm:p-8 rounded-3xl glass-panel border border-slate-800 space-y-6">

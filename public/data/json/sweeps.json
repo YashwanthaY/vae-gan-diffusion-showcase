@@ -1,0 +1,9 @@
+{
+  "_comment": "Stub — replace with Kaggle 'steps' and 'guid' stages output",
+  "_pending": true,
+  "steps": null,
+  "guidance": null,
+  "n": null,
+  "seed": null,
+  "note": "Pending: run Kaggle stages 'steps' and 'guid'"
+}

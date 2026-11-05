@@ -1,0 +1,9 @@
+{
+  "_comment": "Stub — replace with actual parameter counts from model checkpoints",
+  "_pending": true,
+  "vae_total": 16901123,
+  "wgan_generator": 3557123,
+  "wgan_critic": 4656641,
+  "ddpm_total": 28011139,
+  "ddpm_note": "UNet with GroupNorm(32), class-conditional"
+}

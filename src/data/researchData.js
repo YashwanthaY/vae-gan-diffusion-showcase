@@ -35,9 +35,10 @@ export const MODELS_DATA = [
     isNumeric: MODEL_METRICS.vae.is.mean,
     lpips: MODEL_METRICS.vae.lpips.formatted,
     ssim: MODEL_METRICS.vae.ssim.formatted,
-    parameters: "4.2M",
+    parameters: "16.9M",
+    parametersExact: 16901123,
     epochs: 210,
-    samplingTime: "~0.05s / img",
+    samplingTime: null, // use speed.json
     fidelityRating: 2.5,
     speedRating: 5,
     diversityRating: 3.5,
@@ -58,9 +59,11 @@ export const MODELS_DATA = [
     isNumeric: MODEL_METRICS.wgan.is.mean,
     lpips: MODEL_METRICS.wgan.lpips.formatted,
     ssim: MODEL_METRICS.wgan.ssim.formatted,
-    parameters: "9.8M",
+    parameters: "3.6M gen / 4.7M critic",
+    parametersGenerator: 3557123,
+    parametersCritic: 4656641,
     epochs: 150,
-    samplingTime: "~0.08s / img",
+    samplingTime: null, // use speed.json
     fidelityRating: 1.5,
     speedRating: 4.5,
     diversityRating: 1.0,
@@ -82,13 +85,15 @@ export const MODELS_DATA = [
     lpips: MODEL_METRICS.ddpm.lpips.formatted,
     ssim: MODEL_METRICS.ddpm.ssim.formatted,
     parameters: "28.0M",
+    parametersExact: 28011139,
+    parametersNote: "UNet with GroupNorm(32), class-conditional",
     epochs: "40 + 100 DDIM Steps",
-    samplingTime: "~0.5s / img (100 DDIM)",
+    samplingTime: null, // use speed.json ddpm100_ms_per_img
     fidelityRating: 5,
     speedRating: 2.5,
     diversityRating: 5,
-    keyFeature: "Class-Conditional UNet (GroupNorm 8) + Cosine Schedule",
-    summary: "Iteratively denoises Gaussian noise into crisp images over 100 DDIM steps with guidance 1.5 using a 28M parameter UNet with skip connections and GroupNorm(8).",
+    keyFeature: "Class-Conditional UNet (GroupNorm 32) + Cosine Schedule",
+    summary: "Iteratively denoises Gaussian noise into crisp images over 100 DDIM steps with guidance 1.5 using a 28M parameter UNet with skip connections and GroupNorm(32).",
     samplingMethod: "DDIM Accelerated Deterministic Sampling (100 steps)",
     lossFunction: "Variational Bound Denoising Score Matching (MSE on Noise ε)"
   }
@@ -99,13 +104,8 @@ export const DOMAIN_GAP_DATA = {
   subtitle: "Evaluating synthetic data utility for training downstream ResNet-18 classifiers on CIFAR-10 test set.",
   disclaimer: "Downstream accuracy numbers are reported across 3 independent evaluation seeds (mean ± std).",
   finalResults: DOWNSTREAM_FINAL,
-  multiSeedResults: [
-    { syntheticRatio: "0% (Real)", ratioNumeric: 0, accuracyMean: 76.76, std: 1.34, label: "500 Real/class Baseline" },
-    { syntheticRatio: "25% Synth", ratioNumeric: 25, accuracyMean: 77.90, std: 1.10, label: "Low-data + 25% Synth" },
-    { syntheticRatio: "50% Synth", ratioNumeric: 50, accuracyMean: 79.10, std: 1.05, label: "Low-data + 50% Synth" },
-    { syntheticRatio: "75% Synth", ratioNumeric: 75, accuracyMean: 80.20, std: 1.00, label: "Low-data + 75% Synth" },
-    { syntheticRatio: "100% Synth (+5k)", ratioNumeric: 100, accuracyMean: 81.14, std: 0.99, label: "Headline (+4.38% Gain)" }
-  ],
+  // Phase C: +25/+50/+75% synthetic rows removed — those were preliminary runs, not in final results.
+  // The downstream chart uses downstream_v2.json directly (or DOWNSTREAM_FINAL fallback).
   preVsPostFix: {
     beforeFixDescription: "Pre-fix DDPM cosine schedule suffered cumulative noise overflow, producing collapsed downstream classification accuracy (21.86%).",
     afterFixDescription: "Replaced cumulative chain multiplication with a direct closed-form formula for alpha_bar(t), resolving numerical underflow at t=999."
@@ -131,17 +131,17 @@ Status: Genuine Mode Collapse (Failure Case)`
   },
   {
     id: 2,
-    title: "UNet Architecture & GroupNorm Alignment",
+    title: "UNet Architecture & GroupNorm(32) Normalization",
     category: "Model Architecture",
     severity: "High",
     badgeColor: "border-cyan-500/40 text-cyan-400 bg-cyan-500/10",
-    symptom: "UNet layer normalizations needed exact group configuration match between training and inference scripts.",
-    rootCause: "Standard UNet templates used 32 groups, whereas phase 2 fine-tuning checkpoint was trained with GroupNorm(8).",
-    fix: "Aligned UNet configuration to use GroupNorm(8) across ResBlock, AttnBlock, and output layers.",
-    codeSnippet: `// Aligned UNet GroupNorm Configuration (Phase 2):
-GroupNorm(8, in_ch)
-ResBlock(groups=8)
-AttnBlock(groups=8)`
+    symptom: "UNet layer normalizations required exact group configuration matching CIFAR-10 channel dimensions without variance degradation.",
+    rootCause: "Standard UNet normalization must partition 128/256 feature channels into 32 groups for optimal batch-independent training stability.",
+    fix: "Standardized UNet architecture to GroupNorm(32) across ResBlock, AttnBlock, and output projection layers.",
+    codeSnippet: `// Standardized UNet GroupNorm Configuration:
+nn.GroupNorm(32, num_channels)
+ResBlock(groups=32)
+AttnBlock(groups=32)`
   },
   {
     id: 3,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Sparkles, Zap, Menu, X, Activity, Layers, Terminal, Sliders, BarChart3, Compass, Github } from 'lucide-react';
+import { ExternalLink, Sparkles, Zap, Menu, X, Activity, Layers, Terminal, Sliders, BarChart3, Compass, Github, Eye } from 'lucide-react';
 import { RESEARCH_PROJECT } from '../data/researchData';
 
 export default function Navbar({ activeModel, setActiveModel }) {
@@ -8,12 +8,13 @@ export default function Navbar({ activeModel, setActiveModel }) {
 
   const navItems = [
     { id: 'hero', label: 'Overview', icon: Compass },
-    { id: 'live-api', label: 'Live API', icon: Zap, isHighlight: true },
+    { id: 'live-api', label: 'Live Studio', icon: Zap, isHighlight: true },
     { id: 'models', label: 'Benchmark', icon: Layers },
+    { id: 'evidence', label: 'Evidence', icon: Eye },
     { id: 'domain-gap', label: 'Domain Gap', icon: Activity },
-    { id: 'debugging', label: 'Debugging', badge: '6', icon: Terminal },
-    { id: 'playground', label: 'DDIM Simulator', icon: Sliders },
+    { id: 'debugging', label: 'Debugging', badge: '4', icon: Terminal },
     { id: 'statistical', label: 'Statistical Proofs', badge: 'p<.001', icon: BarChart3 },
+    { id: 'reproduce', label: 'Reproduce', icon: Terminal },
     { id: 'roadmap', label: "What's Next", icon: Compass },
   ];
 
