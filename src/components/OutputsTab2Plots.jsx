@@ -2,6 +2,7 @@ import React, { useRef, useCallback } from 'react';
 import { lazy, Suspense } from 'react';
 import { Download } from 'lucide-react';
 import useJsonData from '../hooks/useJsonData.js';
+import { CANONICAL_METRICS } from '../data/metrics.js';
 import { DOWNSTREAM_FINAL } from '../data/researchData.js';
 
 // Lazy-load Chart.js wrapper
@@ -180,7 +181,12 @@ function PrecRecallScatter({ prdc }) {
 
   return (
     <ChartCard title="Precision vs Recall" caption="Error bars represent ±std across evaluation seeds. WGAN-GP recall ≈ 0.00 indicates mode collapse." chartRef={ref}>
-      <Suspense fallback={null}><LazyScatter ref={ref} data={{ datasets }} options={opts} /></Suspense>
+      <div className="relative h-full">
+        <Suspense fallback={null}><LazyScatter ref={ref} data={{ datasets }} options={opts} /></Suspense>
+        <div className="absolute bottom-2 left-6 px-2 py-0.5 rounded bg-amber-950/80 border border-amber-500/60 text-[10px] font-mono text-amber-300 pointer-events-none">
+          ⚠ WGAN-GP recall = 0: mode collapse
+        </div>
+      </div>
     </ChartCard>
   );
 }
@@ -196,7 +202,7 @@ function PerSeedFid({ prdc }) {
 
   const datasets = [
     ...(vaeSeeds ? [{
-      label: 'β-VAE FID (mean 112.37 ± 0.48)',
+      label: `β-VAE FID (mean ${CANONICAL_METRICS.vae.fid})`,
       data: vaeSeeds.map((v, i) => ({ x: i + 1, y: v })),
       borderColor: COLORS.vae.line,
       backgroundColor: COLORS.vae.point,
@@ -204,7 +210,7 @@ function PerSeedFid({ prdc }) {
       showLine: false,
     }] : []),
     ...(wganSeeds ? [{
-      label: 'WGAN-GP FID (mean 242.47 ± 0.35)',
+      label: `WGAN-GP FID (mean ${CANONICAL_METRICS.wgan.fid})`,
       data: wganSeeds.map((v, i) => ({ x: i + 1, y: v })),
       borderColor: COLORS.wgan.line,
       backgroundColor: COLORS.wgan.point,
@@ -212,7 +218,7 @@ function PerSeedFid({ prdc }) {
       showLine: false,
     }] : []),
     ...(ddpmSeeds ? [{
-      label: 'DDPM FID (11.16, evaluated seed 42)',
+      label: `DDPM FID (${CANONICAL_METRICS.ddpm.fid}, evaluated seed 42)`,
       data: ddpmSeeds.map((v, i) => ({ x: i + 1, y: v })),
       borderColor: COLORS.ddpm.line,
       backgroundColor: COLORS.ddpm.point,
@@ -240,7 +246,7 @@ function PerSeedFid({ prdc }) {
         },
         title: { display: true, text: 'Evaluation Random Seed', color: '#64748b' },
       },
-      y: { ...BASE_OPTS.scales.y, title: { display: true, text: 'FID ↓', color: '#64748b' } },
+      y: { ...BASE_OPTS.scales.y, min: 0, max: 270, title: { display: true, text: 'FID ↓', color: '#64748b' } },
     },
   };
 
@@ -298,6 +304,15 @@ function DownstreamChart() {
     </ChartCard>
   );
 }
+
+export {
+  FidVsSteps,
+  MetricsVsGuidance,
+  ParetoChart,
+  PrecRecallScatter,
+  PerSeedFid,
+  DownstreamChart,
+};
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 export default function OutputsTab2Plots({ lastRun, studioSliders }) {

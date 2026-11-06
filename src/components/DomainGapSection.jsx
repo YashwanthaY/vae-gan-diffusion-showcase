@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Activity, AlertTriangle, HelpCircle, Layers } from 'lucide-react';
 import { DOMAIN_GAP_DATA } from '../data/researchData';
+import { CANONICAL_METRICS } from '../data/metrics';
 import DownstreamAccuracy from './DownstreamAccuracy';
 
 export default function DomainGapSection() {
@@ -71,7 +72,7 @@ export default function DomainGapSection() {
                 Replaced cumulative chain multiplication with a direct closed-form formula for alpha_bar(t), resolving numerical underflow at t=999.
               </p>
               <div className="flex justify-between text-xs font-mono pt-2 border-t border-emerald-900/50">
-                <span className="text-slate-400">FID Score: 11.32 ± 0.14</span>
+                <span className="text-slate-400">FID Score: {CANONICAL_METRICS.ddpm.fid}</span>
                 <span className="text-emerald-400 font-bold">Status: Fixed</span>
               </div>
             </div>

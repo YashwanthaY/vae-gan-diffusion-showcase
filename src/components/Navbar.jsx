@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   ExternalLink, Sparkles, Zap, Menu, X, Terminal,
-  Sliders, BarChart3, HelpCircle, Eye, Play, Sun, Moon, Github
+  Sliders, BarChart3, Eye, Play, Sun, Moon, Github, Database, Award
 } from 'lucide-react';
 import { RESEARCH_PROJECT } from '../data/researchData';
 import ExaminerTourModal from './ExaminerTourModal';
@@ -39,12 +39,13 @@ export default function Navbar({ activeModel, setActiveModel }) {
   };
 
   const navItems = [
-    { id: 'hero',        label: 'Question',   icon: HelpCircle },
-    { id: 'design',      label: 'Design',     icon: Sliders    },
-    { id: 'findings',    label: 'Findings',   icon: BarChart3  },
-    { id: 'live-api',    label: 'Live Lab',   icon: Zap, isHighlight: true },
-    { id: 'statistical', label: 'Proof',      icon: Eye, badge: 'p<.001' },
-    { id: 'reproduce',   label: 'Reproduce',  icon: Terminal   },
+    { id: 'hero',           label: 'Overview',       icon: Sparkles },
+    { id: 'live-lab',       label: 'Live Lab',       icon: Zap, isHighlight: true },
+    { id: 'benchmark',      label: 'Benchmark',      icon: BarChart3 },
+    { id: 'evidence',       label: 'Evidence',       icon: Eye },
+    { id: 'synthetic-data', label: 'Synthetic Data', icon: Database },
+    { id: 'statistical',    label: 'Proof',          icon: Award, badge: 'p<.001' },
+    { id: 'reproduce',      label: 'Reproduce',      icon: Terminal },
   ];
 
   const scrollTo = (id) => {
@@ -118,7 +119,7 @@ export default function Navbar({ activeModel, setActiveModel }) {
             </div>
           </div>
 
-          {/* Desktop Navigation Links (Question | Design | Findings | Live Lab | Proof | Reproduce) */}
+          {/* Desktop Navigation Links (Overview | Live Lab | Benchmark | Evidence | Synthetic Data | Proof | Reproduce) */}
           <nav className="hidden lg:flex items-center space-x-1 bg-slate-900/90 p-1 rounded-full border border-slate-800/90 shadow-inner">
             {navItems.map((item) => {
               const isActive = activeSection === item.id;

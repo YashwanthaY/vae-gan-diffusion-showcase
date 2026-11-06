@@ -2,128 +2,122 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, ChevronLeft, ChevronRight, HelpCircle, BookOpen,
-  CheckCircle2, AlertTriangle, Zap, Sliders, BarChart3, Database, Maximize2
+  CheckCircle2, AlertTriangle, Zap, Sliders, BarChart3, Database
 } from 'lucide-react';
+import { CANONICAL_METRICS } from '../data/metrics';
 
 const SLIDES = [
   {
     num: 1,
-    category: 'The Question',
-    title: 'Which generative model should you trust to create training data?',
-    subtitle: 'A Comparative Parametric Study of β-VAE, WGAN-GP, and Class-Conditional DDPM on CIFAR-10',
-    keyTakeaway: 'Generators are evaluated on downstream training utility and distribution fidelity, not just pretty pictures.',
+    category: 'Project Overview',
+    title: 'Generative Model Evaluation on CIFAR-10',
+    subtitle: 'Comparative Parametric Study of β-VAE, WGAN-GP, and Class-Conditional DDPM',
+    keyTakeaway: 'Generative architectures are benchmarked on distribution fidelity and downstream training utility under one standardized protocol.',
     bullets: [
-      'Comparative evaluation across three distinct probabilistic frameworks under one unified evaluation protocol.',
-      'Rigorous 5-metric characterisation: FID, Precision, Recall, Density, Coverage + Inference Latency.',
-      'Tested against empirical downstream classifier performance (ResNet-18) in data-scarce vs data-rich regimes.',
+      'Evaluation across three distinct probabilistic frameworks under one unified evaluation protocol.',
+      '5-metric characterisation: FID, Precision, Recall, Density, Coverage plus inference latency.',
+      'Empirical downstream classifier testing (ResNet-18) in data-scarce vs data-rich regimes.',
     ],
-    highlight: 'DDPM achieves 10× better fidelity than β-VAE and rescues mode coverage where GANs fail.',
+    highlight: 'DDPM achieves ~10× better fidelity than β-VAE and maintains full distribution coverage where WGAN-GP collapses.',
     speakerNotes: [
-      'Examiner Q: "Why compare such different architectures?"',
-      'Answer: VAE, GAN, and Diffusion represent three fundamentally different mathematical formulations of generative modelling (variational lower bound, minimax game, score matching / denoising). We benchmark the exact trade-offs in quality, speed, and distribution coverage.',
+      'Architecture Selection Rationale: VAE, GAN, and Diffusion represent three fundamentally distinct mathematical formulations of generative modelling. We benchmark their empirical tradeoffs in fidelity, latency, and mode coverage.',
     ],
   },
   {
     num: 2,
     category: 'Research Protocol',
-    title: 'Controlled Parametric Benchmark: Zero Cherry-Picking',
-    subtitle: 'Standardized evaluation subset, 5 evaluation seeds, and strict reproducibility',
-    keyTakeaway: 'Every model was evaluated on the exact same 10,000-image CIFAR-10 reference split.',
+    title: 'Standardized Evaluation Methodology',
+    subtitle: 'Fixed reference subset, 5 evaluation seeds, and strict reproducibility',
+    keyTakeaway: 'Every model was evaluated on the exact same 10 000-image CIFAR-10 reference split.',
     bullets: [
-      '1 trained checkpoint per model evaluated across 5 random seeds (DDPM evaluated at N=5,000, 100 steps, w=1.5).',
-      'β-VAE (16.9M params, latent dim 128) vs WGAN-GP (3.56M G / 4.66M D) vs DDPM (28.0M UNet).',
+      '1 trained checkpoint per model evaluated across 5 random seeds (DDPM evaluated at N = 5 000, 100 steps, w = 1.5).',
+      'β-VAE (16.90 M) vs WGAN-GP (3.56 M G / 4.66 M D) vs DDPM (28.01 M UNet).',
       'Parameter sweeps across DDIM steps (10–200) and classifier-free guidance scale w (0.0–4.0).',
     ],
-    highlight: 'FID uses N=5,000 vs 10k reference — not comparable to 50k literature figures, but strictly fair internally.',
+    highlight: 'Protocol constraint: FID uses N = 5 000 vs 10k reference — not comparable to 50k literature figures, but strictly controlled internally.',
     speakerNotes: [
-      'Examiner Q: "Why is your DDPM FID 11.2 and not 3.5 like Ho et al. 2020?"',
-      'Answer: Literature FID (3.17–3.55) evaluates 50,000 generated samples against the full 50,000 training set. Due to free-tier GPU constraints (Tesla T4), we compute FID with N=5,000 against a fixed 10k reference subset. All 3 models were benchmarked on the exact same harness.',
+      'FID Sample Count Context: Literature FID values evaluate 50 000 generated samples against 50 000 training images. Due to GPU constraints on Tesla T4, we compute paired FID with N = 5 000 against a fixed 10 000 reference subset.',
     ],
   },
   {
     num: 3,
     category: 'Fidelity & Quality',
-    title: 'Distribution Fidelity: Diffusion Dominates Pixel Statistics',
-    subtitle: 'DDPM FID 11.16 vs β-VAE 112.37 vs WGAN-GP 242.47',
-    keyTakeaway: 'Diffusion is ~10× closer to real CIFAR-10 data distribution than variational autoencoders.',
+    title: 'Distribution Fidelity Benchmark',
+    subtitle: `DDPM FID ${CANONICAL_METRICS.ddpm.fid} vs β-VAE ${CANONICAL_METRICS.vae.fid} vs WGAN-GP ${CANONICAL_METRICS.wgan.fid}`,
+    keyTakeaway: 'Diffusion achieves ~10× closer distribution alignment to real CIFAR-10 data than variational autoencoders.',
     bullets: [
-      'β-VAE suffers from pixel-space Gaussian blur due to MSE loss over high-frequency components.',
-      'WGAN-GP failed to learn multi-modal CIFAR-10 data, stagnating at FID 242.47 across all 5 seeds.',
-      'DDPM achieves Inception Score 9.35 (provisional), accurately resolving class semantics (airplanes, horses, ships).',
+      'β-VAE exhibits characteristic reconstruction blur due to pixel-space ELBO loss averaging high-frequency details.',
+      'WGAN-GP failed to model multi-modal CIFAR-10 data without conditional guidance.',
+      'DDPM accurately resolves class semantics across all 10 CIFAR-10 categories.',
     ],
-    highlight: 'Diffusion iteratively denoises across latent trajectories, sidestepping mode collapse and blur.',
+    highlight: 'Diffusion iteratively denoises across latent trajectories, avoiding reconstruction blur and mode collapse.',
     speakerNotes: [
-      'Examiner Q: "Why did VAE have high FID despite good reconstruction loss?"',
-      'Answer: VAE optimises the ELBO with pixel-wise reconstruction loss (MSE), which penalises average pixel distance and leads to blurred conditional means. FID measures feature statistics in Inception embedding space, where blur is heavily penalised.',
+      'Reconstruction Blur Explanation: VAE optimizes the ELBO with pixel-wise MSE, which penalizes distance to conditional means. FID measures feature statistics in Inception embedding space, where smooth edges receive higher penalties.',
     ],
   },
   {
     num: 4,
-    category: 'Diversity & Failure Post-Mortem',
-    title: 'Mode Collapse: When Discriminator Loss Hides Failure',
-    subtitle: 'WGAN-GP Recall 0.000 & Coverage 0.012 vs DDPM Recall 0.672',
-    keyTakeaway: 'FID alone is insufficient: multi-metric evaluation uncovers complete GAN mode collapse.',
+    category: 'Diversity & Failure Analysis',
+    title: 'Mode Collapse Diagnostics',
+    subtitle: `WGAN-GP Recall ${CANONICAL_METRICS.wgan.recall} & Coverage ${CANONICAL_METRICS.wgan.coverage} vs DDPM Recall ${CANONICAL_METRICS.ddpm.recall}`,
+    keyTakeaway: 'Multi-metric evaluation uncovers complete GAN mode collapse that standard loss metrics mask.',
     bullets: [
-      'WGAN-GP generated repetitive high-contrast textures that tricked discriminator loss but dropped 99% of modes.',
-      'Precision/Recall (Sajjadi / Kynkäänniemi): DDPM Precision 0.796, Recall 0.672; WGAN-GP Recall 0.000.',
-      'Density/Coverage (Naeem et al.): DDPM Coverage 0.834; WGAN-GP Coverage 0.012.',
+      'WGAN-GP generated repetitive high-contrast textures that reached adversarial equilibrium but dropped distribution modes.',
+      `Precision and Recall: DDPM Precision ${CANONICAL_METRICS.ddpm.precision}, Recall ${CANONICAL_METRICS.ddpm.recall}; WGAN-GP Recall ${CANONICAL_METRICS.wgan.recall}.`,
+      `Density and Coverage: DDPM Coverage ${CANONICAL_METRICS.ddpm.coverage}; WGAN-GP Coverage ${CANONICAL_METRICS.wgan.coverage}.`,
     ],
-    highlight: 'Documented Failure: Gradient penalty controls Lipschitz continuity but does not prevent mode collapse without label guidance.',
+    highlight: 'Documented Failure: Gradient penalty controls Lipschitz continuity but does not prevent mode collapse without label conditioning.',
     speakerNotes: [
-      'Examiner Q: "Why did WGAN-GP collapse? Did you train long enough?"',
-      'Answer: Yes, trained for 100k critic steps. Unconditional WGAN-GP on 10 diverse CIFAR-10 classes without auxiliary classifier loss or projection discriminator struggles with class imbalance and complex manifolds. We document this failure transparently as a scientific finding.',
+      'Mode Collapse Diagnostic: Unconditional WGAN-GP on 10 diverse CIFAR-10 classes without projection discriminator or auxiliary classifier loss struggles with manifold complexity. This failure is documented transparently.',
     ],
   },
   {
     num: 5,
     category: 'Compute & Pareto Frontier',
-    title: 'The Quality-vs-Cost Tradeoff: 1,000× Latency Penalty',
-    subtitle: '524 ms vs 0.41 ms vs 0.80 ms on NVIDIA Tesla T4',
-    keyTakeaway: 'Generative quality is purchased with compute. The Pareto knee is at 50 DDIM steps with w=1.5.',
+    title: 'Quality-vs-Cost Tradeoff Curve',
+    subtitle: `${CANONICAL_METRICS.ddpm.latency} ms vs ${CANONICAL_METRICS.vae.latency} ms vs ${CANONICAL_METRICS.wgan.latency} ms per image on Tesla T4`,
+    keyTakeaway: 'Generative quality requires iterative compute. The Pareto knee sits at 50 DDIM steps with w = 1.5.',
     bullets: [
-      'β-VAE (0.41 ms/img) and WGAN-GP (0.80 ms/img) are single-pass feedforward networks.',
-      'DDPM requires 100 iterative UNet evaluations (524 ms/img) — over 1,200× slower.',
-      'Knee of Pareto front: 50 DDIM steps delivers FID 13.42 at 261 ms/img (91% of maximum quality in 50% time).',
+      'β-VAE (0.41 ms/img) and WGAN-GP (0.80 ms/img) are single-pass feedforward models.',
+      'DDPM requires 100 iterative UNet evaluations (524 ms/img) — a ~1 000× latency tradeoff.',
+      'Knee of Pareto front: 50 DDIM steps yields 91% of maximum quality in 50% of sampling time.',
     ],
-    highlight: 'Sampling past 100 steps yields diminishing returns (<0.3 FID improvement for 2× latency).',
+    highlight: 'Sampling past 100 DDIM steps yields diminishing returns (<0.3 FID improvement for 2× latency).',
     speakerNotes: [
-      'Examiner Q: "Can diffusion be deployed in real-time robotics or edge systems?"',
-      'Answer: Direct 100-step DDPM is too slow (1.9 images/sec on T4). However, using our 50-step Pareto knee or distillation (e.g., Progressive Distillation / Consistency Models), latency can be reduced to acceptable levels.',
+      'Deployment Feasibility: Direct 100-step DDPM is too compute-intensive for embedded robotics. However, 50-step DDIM or progressive distillation provides a practical operational trade-off.',
     ],
   },
   {
     num: 6,
     category: 'Downstream Utility',
-    title: 'Does Synthetic Data Actually Help a Downstream Classifier?',
-    subtitle: 'ResNet-18 Trained on CIFAR-10 Subsets + 5,000 Synthetic Images',
-    keyTakeaway: 'Synthetic data helps in low-data regimes (+4.38%, p=0.030), but provides no significant gain (+0.54%, p=0.13) with full data.',
+    title: 'Downstream Classifier Utility Benchmark',
+    subtitle: 'ResNet-18 Trained on CIFAR-10 Subsets + 5 000 Synthetic Images',
+    keyTakeaway: 'Synthetic data provides significant gains in low-data regimes (+4.38 pts, p = 0.030), but no significant gain (+0.54 pts, p = 0.13) with full real data.',
     bullets: [
-      'Low data (500 real/class): Adding 5k DDPM synthetic images boosts accuracy from 79.4% to 83.78% (p = 0.030).',
-      'Full data (5,000 real/class): Adding 5k synthetic images gives 92.86% vs 92.32% real-only (+0.54%, p = 0.13, not significant).',
-      'Synthetic-only baseline: Model trained strictly on 5k synthetic images reaches 76.2% accuracy.',
+      'Low data (500 real/class): Adding 5k DDPM synthetic images boosts accuracy from 76.76% to 81.14% (+4.38 pts, p = 0.030).',
+      'Full data (5 000 real/class): Adding 5k synthetic images gives 94.11% vs 93.58% real-only (+0.54 pts, p = 0.13, n.s.).',
+      'Synthetic-only baseline: Model trained strictly on 5k synthetic images reaches 73.64% test accuracy.',
     ],
-    highlight: 'Empirical Rule: Synthetic data functions as a data regulariser when real samples are scarce; never claim "as good as real data".',
+    highlight: 'Empirical Rule: Synthetic data functions as an effective regulariser under scarcity, but does not substitute for real data at scale.',
     speakerNotes: [
-      'Examiner Q: "Why didn\'t synthetic data help when you had 50,000 real images?"',
-      'Answer: Because the generative model was trained on the CIFAR-10 training set. Its synthetic distribution is a smoothed, slightly lossy approximation of the true distribution. When the classifier already has the full real dataset, the synthetic data introduces domain bias without new information.',
+      'Full Data Marginal Gain: The generative model is trained on the CIFAR-10 train set. Its distribution is a smoothed approximation. With full real data, synthetic images introduce inductive bias without new information.',
     ],
   },
   {
     num: 7,
-    category: 'Conclusions & Takeaways',
-    title: 'Summary: Practical Deployment Matrix',
-    subtitle: 'Which generative architecture should you deploy for what task?',
-    keyTakeaway: 'No single model wins all dimensions. The optimal choice depends strictly on your latency vs fidelity budget.',
+    category: 'Conclusions',
+    title: 'Practical Deployment Matrix',
+    subtitle: 'Operational recommendations across generative paradigms',
+    keyTakeaway: 'No single model dominates all axes. Selection depends strictly on latency vs fidelity requirements.',
     bullets: [
-      'High Fidelity / Synthetic Augmentation: Class-conditional DDPM (50 DDIM steps, w=1.5).',
+      'High Fidelity / Synthetic Data Augmentation: Class-conditional DDPM (50 DDIM steps, w = 1.5).',
       'Real-Time Latency / Latent Manipulation: β-VAE (latent vector arithmetic, 0.41 ms inference).',
-      'WGAN-GP on Complex Datasets: Requires auxiliary conditioning; vanilla WGAN-GP collapsed.',
-      'Scientific Honesty: Published benchmarks must report evaluation reference sizes and downstream p-values.',
+      'WGAN-GP on Complex Datasets: Requires auxiliary conditioning; unconditional variant collapsed.',
+      'Scientific Rigour: Published benchmarks must report evaluation reference sizes and downstream p-values.',
     ],
     highlight: 'Full reproducible code, checkpoints, evaluation harness, and raw JSON logs are openly hosted.',
     speakerNotes: [
-      'Examiner Q: "What is your main takeaway recommendation?"',
-      'Answer: For downstream data augmentation, class-conditional diffusion at 50 steps is the only model that provided statistically significant gains. For embedded real-time tasks, VAE remains unbeatable on speed despite lower visual sharpness.',
+      'Primary Takeaway: Class-conditional diffusion at 50 steps is the optimal recommendation for downstream data augmentation, while VAE remains essential for real-time edge deployment.',
     ],
   },
 ];
@@ -179,7 +173,7 @@ export default function ExaminerTourModal({ isOpen, onClose }) {
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
-          className="relative max-w-4xl w-full bg-slate-900 border border-cyan-500/40 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+          className="relative max-w-4xl w-full bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
         >
           {/* Header Bar */}
           <div className="px-6 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
@@ -195,20 +189,20 @@ export default function ExaminerTourModal({ isOpen, onClose }) {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowNotes(v => !v)}
-                className={`px-3 py-1.5 rounded-xl border text-xs font-mono flex items-center space-x-1.5 transition-all ${
+                className={`px-3 py-1.5 rounded-xl border text-xs font-mono flex items-center space-x-1.5 transition-all cursor-pointer ${
                   showNotes
                     ? 'bg-amber-950/80 border-amber-500/60 text-amber-300'
                     : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
                 }`}
-                title="Toggle Speaker Notes & Examiner Q&A (Hotkey: 'N')"
+                title="Toggle Speaker Notes & Defense (Hotkey: 'N')"
               >
                 <HelpCircle className="w-3.5 h-3.5" />
-                <span>{showNotes ? 'Hide Q&A Notes (N)' : 'Speaker Q&A (N)'}</span>
+                <span>{showNotes ? 'Hide Defense Notes (N)' : 'Speaker Notes (N)'}</span>
               </button>
 
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                 title="Close presentation (Esc)"
               >
                 <X className="w-5 h-5" />
@@ -254,7 +248,7 @@ export default function ExaminerTourModal({ isOpen, onClose }) {
               <div className="p-4 rounded-2xl bg-amber-950/30 border border-amber-600/50 space-y-2">
                 <div className="flex items-center space-x-2 text-xs font-mono font-bold text-amber-400">
                   <BookOpen className="w-4 h-4" />
-                  <span>Examiner Anticipated Question & Crisp Defense:</span>
+                  <span>Discussion Defense & Context:</span>
                 </div>
                 {currentSlide.speakerNotes.map((sn, i) => (
                   <p key={i} className="text-xs font-mono text-amber-200/90 leading-relaxed">
@@ -275,7 +269,7 @@ export default function ExaminerTourModal({ isOpen, onClose }) {
               <button
                 onClick={prevSlide}
                 disabled={slideIdx === 0}
-                className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed text-xs font-mono flex items-center space-x-1 transition-all"
+                className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed text-xs font-mono flex items-center space-x-1 transition-all cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Prev</span>
@@ -286,7 +280,7 @@ export default function ExaminerTourModal({ isOpen, onClose }) {
                   <button
                     key={i}
                     onClick={() => setSlideIdx(i)}
-                    className={`w-2.5 h-2.5 rounded-full transition-all ${
+                    className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${
                       i === slideIdx ? 'bg-cyan-400 w-6' : 'bg-slate-700 hover:bg-slate-500'
                     }`}
                     aria-label={`Slide ${i + 1}`}
@@ -297,7 +291,7 @@ export default function ExaminerTourModal({ isOpen, onClose }) {
               <button
                 onClick={nextSlide}
                 disabled={slideIdx === SLIDES.length - 1}
-                className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold disabled:opacity-40 disabled:cursor-not-allowed text-xs font-mono flex items-center space-x-1 transition-all shadow-md"
+                className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold disabled:opacity-40 disabled:cursor-not-allowed text-xs font-mono flex items-center space-x-1 transition-all shadow-md cursor-pointer"
               >
                 <span>Next</span>
                 <ChevronRight className="w-4 h-4" />

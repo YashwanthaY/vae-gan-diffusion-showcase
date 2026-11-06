@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { Layers, Eye, GitBranch, Cpu, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Eye, AlertTriangle } from 'lucide-react';
 import { CIFAR10_CLASSES } from '../config.js';
+import { CANONICAL_METRICS } from '../data/metrics';
 
 export default function EvidenceSection() {
-  const [activeSeed, setActiveSeed] = useState(42);
   const [activeClassIdx, setActiveClassIdx] = useState(5); // dog
-  const [activeTab, setActiveTab] = useState('samples'); // samples | classes | trajectory | interp | memorisation | wgan_failure
-
-  const seeds = [42, 123, 256];
+  const [activeTab, setActiveTab] = useState('classes'); // classes | trajectory | interp | memorisation | wgan_failure
 
   return (
     <section id="evidence" className="py-24 relative bg-slate-950 border-t border-slate-900">
@@ -22,24 +20,23 @@ export default function EvidenceSection() {
             Visual Quality, Trajectories & Failure Modes
           </h2>
           <p className="text-slate-400 text-sm font-mono">
-            Unselected sample grids, step-by-step denoising trajectories, latent space continuity, and documented failure cases.
+            Class conditioning explorer, step-by-step denoising trajectories, latent space continuity, and documented failure cases.
           </p>
         </div>
 
-        {/* Sub-navigation tabs */}
+        {/* Sub-navigation tabs: 5 canonical tabs */}
         <div className="flex flex-wrap gap-2 justify-center p-1.5 rounded-2xl bg-slate-900/80 border border-slate-800 max-w-fit mx-auto">
           {[
-            { id: 'samples', label: 'Unfiltered 4×4 Grids' },
-            { id: 'classes', label: 'Class Explorer' },
-            { id: 'trajectory', label: 'Denoising Trajectory' },
-            { id: 'interp', label: 'VAE Latent Interpolation' },
+            { id: 'classes',      label: 'Class Explorer' },
+            { id: 'trajectory',   label: 'Denoising Trajectory' },
+            { id: 'interp',       label: 'VAE Latent Interpolation' },
             { id: 'memorisation', label: 'Memorisation Check' },
             { id: 'wgan_failure', label: 'WGAN-GP Failure Panel' },
           ].map(t => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all cursor-pointer ${
                 activeTab === t.id
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
@@ -50,63 +47,7 @@ export default function EvidenceSection() {
           ))}
         </div>
 
-        {/* Tab 1: Samples */}
-        {activeTab === 'samples' && (
-          <div className="p-6 sm:p-8 rounded-3xl glass-panel border border-slate-800 space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-bold text-white">Unselected 4×4 Sample Grids</h3>
-                <p className="text-xs font-mono text-slate-400 mt-0.5">
-                  Fixed evaluation seeds ({seeds.join(', ')}), strictly uncurated and unfiltered.
-                </p>
-              </div>
-              <div className="flex items-center space-x-2 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-mono">
-                <span className="text-slate-400 px-2">Seed:</span>
-                {seeds.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setActiveSeed(s)}
-                    className={`px-2.5 py-1 rounded-lg ${activeSeed === s ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40' : 'text-slate-400 hover:text-slate-200'}`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                { key: 'vae', name: 'β-VAE', color: 'emerald', fid: '112.37 ± 0.48' },
-                { key: 'wgan', name: 'WGAN-GP', color: 'amber', fid: '242.47 ± 0.35' },
-                { key: 'ddpm', name: 'DDPM', color: 'cyan', fid: '11.32 ± 0.14 (provisional)' },
-              ].map(m => (
-                <div key={m.key} className={`p-4 rounded-2xl bg-slate-950/70 border border-${m.color}-500/30 space-y-3`}>
-                  <div className="flex justify-between items-center text-xs font-mono">
-                    <span className={`font-bold text-${m.color}-300`}>{m.name}</span>
-                    <span className="text-slate-400 text-[10px]">FID {m.fid}</span>
-                  </div>
-                  <div className="aspect-square rounded-xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center">
-                    <img
-                      src={`/img/grids/${m.key}_seed${activeSeed}.png`}
-                      onError={(e) => {
-                        // Fallback to assets if specific seed png not yet written by Kaggle
-                        e.target.src = `/assets/${m.key}_grid.png`;
-                      }}
-                      alt={`${m.name} Seed ${activeSeed} Grid`}
-                      className="w-full h-full object-cover"
-                      style={{ imageRendering: 'pixelated' }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-slate-500 font-mono text-center">
-                    4×4 grid (16 images) · seed {activeSeed} · scale 4, padding 2
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Tab 2: Class Explorer */}
+        {/* Tab 1: Class Explorer */}
         {activeTab === 'classes' && (
           <div className="p-6 sm:p-8 rounded-3xl glass-panel border border-slate-800 space-y-6">
             <div className="space-y-2">
@@ -121,7 +62,7 @@ export default function EvidenceSection() {
                 <button
                   key={c.id}
                   onClick={() => setActiveClassIdx(c.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-medium transition-all cursor-pointer ${
                     activeClassIdx === c.id
                       ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
                       : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
@@ -141,7 +82,7 @@ export default function EvidenceSection() {
                 <div className="aspect-square rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center">
                   <img
                     src={`/img/grids/ddpm_class${activeClassIdx}_${CIFAR10_CLASSES[activeClassIdx].name}.png`}
-                    onError={(e) => { e.target.src = '/assets/ddpm_grid.png'; }}
+                    onError={(e) => { e.target.src = '/img/grids/ddpm_seed42.png'; }}
                     alt={`DDPM Class ${CIFAR10_CLASSES[activeClassIdx].label}`}
                     className="w-full h-full object-cover"
                     style={{ imageRendering: 'pixelated' }}
@@ -152,34 +93,34 @@ export default function EvidenceSection() {
                 <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
                   <div className="text-cyan-400 font-bold">Class Conditioning Mechanism</div>
                   <p className="text-slate-400 leading-relaxed">
-                    Labels are mapped through a learned embedding table and added directly into the UNet residual blocks. Classifier-free guidance combines unconditional ($\emptyset = 10$) and conditional predictions:
+                    Labels are mapped through a learned embedding table and added directly into the UNet residual blocks. Classifier-free guidance combines unconditional and conditional predictions:
                   </p>
                   <code className="block p-2 rounded bg-slate-950 text-cyan-300 border border-slate-800 text-[11px]">
                     ε = ε_uncond + w * (ε_cond - ε_uncond)
                   </code>
                 </div>
                 <p className="text-slate-400 text-[11px]">
-                  Setting $w=0$ produces unconditional generation, while $w=1.5$ sharpens class-specific features without mode collapse.
+                  Setting w=0 produces unconditional generation, while w=1.5 sharpens class-specific features without mode collapse.
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Tab 3: Denoising Trajectory */}
+        {/* Tab 2: Denoising Trajectory */}
         {activeTab === 'trajectory' && (
           <div className="p-6 sm:p-8 rounded-3xl glass-panel border border-slate-800 space-y-6">
             <div>
               <h3 className="text-lg font-bold text-white">DDIM Deterministic Denoising Trajectory</h3>
               <p className="text-xs font-mono text-slate-400 mt-1">
-                Visualizing intermediate $\hat{x}_0(t)$ Tweedie estimates across 100 DDIM timesteps for each CIFAR-10 class.
+                Visualizing intermediate Tweedie estimates across 100 DDIM timesteps for each CIFAR-10 class.
               </p>
             </div>
 
             <div className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 p-2">
               <img
                 src="/img/traj/ddpm_trajectory.png"
-                onError={(e) => { e.target.src = '/assets/ddpm_sample_grid.png'; }}
+                onError={(e) => { e.target.src = '/img/grids/ddpm_seed42.png'; }}
                 alt="DDPM Denoising Trajectory Across 100 Steps"
                 className="w-full h-auto rounded-xl"
                 style={{ imageRendering: 'pixelated' }}
@@ -188,25 +129,25 @@ export default function EvidenceSection() {
 
             <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-mono text-slate-400 space-y-1">
               <span className="text-cyan-400 font-bold">Trajectory Column Legend: </span>
-              Rows correspond to the 10 CIFAR-10 classes. The 9 columns show snapshots of the reconstructed estimate x0-hat as noise decreases from t=999 down to t=0.
+              Rows correspond to the 10 CIFAR-10 classes. The columns show snapshots of the reconstructed estimate x0-hat as noise decreases from t=999 down to t=0.
             </div>
           </div>
         )}
 
-        {/* Tab 4: VAE Latent Interpolation */}
+        {/* Tab 3: VAE Latent Interpolation */}
         {activeTab === 'interp' && (
           <div className="p-6 sm:p-8 rounded-3xl glass-panel border border-slate-800 space-y-6">
             <div>
               <h3 className="text-lg font-bold text-white">β-VAE Latent Manifold Linear Interpolation</h3>
               <p className="text-xs font-mono text-slate-400 mt-1">
-                Spherical and linear walks in the 128-dimensional Gaussian latent space $z \sim \mathcal{N}(0, I)$.
+                Spherical and linear walks in the 128-dimensional Gaussian latent space.
               </p>
             </div>
 
             <div className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 p-2">
               <img
                 src="/img/interp/vae_interp.png"
-                onError={(e) => { e.target.src = '/assets/latent_interpolation.png'; }}
+                onError={(e) => { e.target.src = '/img/grids/vae_seed42.png'; }}
                 alt="VAE Latent Space Interpolation Trajectory"
                 className="w-full h-auto rounded-xl"
                 style={{ imageRendering: 'pixelated' }}
@@ -220,7 +161,7 @@ export default function EvidenceSection() {
           </div>
         )}
 
-        {/* Tab 5: Memorisation Check */}
+        {/* Tab 4: Memorisation Check */}
         {activeTab === 'memorisation' && (
           <div className="p-6 sm:p-8 rounded-3xl glass-panel border border-slate-800 space-y-6">
             <div>
@@ -234,7 +175,7 @@ export default function EvidenceSection() {
               <div className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 p-2">
                 <img
                   src="/img/nn/ddpm_vs_nearest_real.png"
-                  onError={(e) => { e.target.src = '/assets/phase7_results.png'; }}
+                  onError={(e) => { e.target.src = '/img/grids/ddpm_seed42.png'; }}
                   alt="DDPM vs Nearest Training Neighbor"
                   className="w-full h-auto rounded-xl"
                   style={{ imageRendering: 'pixelated' }}
@@ -244,19 +185,19 @@ export default function EvidenceSection() {
                 <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
                   <div className="text-cyan-400 font-bold">Nearest Neighbor Pixel Diagnostic</div>
                   <p className="text-slate-400 leading-relaxed">
-                    To check if the diffusion model merely copies training images, we query the 50,000 CIFAR-10 training images for the minimum $L_2$ pixel distance to each generated output.
+                    To check if the diffusion model copies training images, we query the 50,000 CIFAR-10 training images for the minimum L2 pixel distance to each generated output.
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-800/40 text-amber-300 text-[11px] space-y-1">
                   <span className="font-bold">⚠ Diagnostic Note: </span>
-                  Pixel-space $L_2$ nearest-neighbour check is a qualitative sanity diagnostic, not a comprehensive memorisation metric. It confirms distinct background features, poses, and color palettes from the closest training samples.
+                  Pixel-space L2 nearest-neighbour check is a qualitative sanity diagnostic, not a comprehensive memorisation metric. It confirms distinct background features, poses, and color palettes from closest training samples.
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Tab 6: WGAN-GP Failure Panel */}
+        {/* Tab 5: WGAN-GP Failure Panel */}
         {activeTab === 'wgan_failure' && (
           <div className="p-6 sm:p-8 rounded-3xl glass-panel border border-amber-500/30 space-y-6">
             <div className="flex items-center space-x-2 text-amber-400">
@@ -271,17 +212,17 @@ export default function EvidenceSection() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
               <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/20">
                 <div className="text-slate-500">Evaluated FID:</div>
-                <div className="text-amber-400 text-lg font-bold">242.47 ± 0.35</div>
-                <div className="text-[10px] text-slate-500">vs DDPM 11.32</div>
+                <div className="text-amber-400 text-lg font-bold">{CANONICAL_METRICS.wgan.fid}</div>
+                <div className="text-[10px] text-slate-500">vs DDPM {CANONICAL_METRICS.ddpm.fid}</div>
               </div>
               <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/20">
                 <div className="text-slate-500">Precision / Recall:</div>
-                <div className="text-amber-400 text-lg font-bold">Recall ≈ 0.000</div>
-                <div className="text-[10px] text-slate-500">Coverage ≈ 0.012</div>
+                <div className="text-amber-400 text-lg font-bold">Recall {CANONICAL_METRICS.wgan.recall}</div>
+                <div className="text-[10px] text-slate-500">Coverage {CANONICAL_METRICS.wgan.coverage}</div>
               </div>
               <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/20">
                 <div className="text-slate-500">Architecture:</div>
-                <div className="text-slate-200 font-bold">3.56M Gen / 4.66M Critic</div>
+                <div className="text-slate-200 font-bold">{CANONICAL_METRICS.wgan.params}</div>
                 <div className="text-[10px] text-slate-500">150 epochs, 1-Lipschitz GP</div>
               </div>
             </div>

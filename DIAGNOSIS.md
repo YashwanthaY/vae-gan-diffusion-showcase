@@ -77,3 +77,4 @@ Querying the Hugging Face Space runtime API (`https://huggingface.co/api/spaces/
 * **β-VAE:** Parameters 16,901,123; FID 112.37 ± 0.48; Precision 0.526, Recall 0.096, Density 0.308, Coverage 0.101; Speed 0.41 ms/img.
 * **WGAN-GP:** Generator 3,557,123 / Critic 4,656,641; FID 242.47 ± 0.35; Precision 0.356, Recall 0.000 (Mode Collapse), Density 0.126, Coverage 0.012; Speed 0.80 ms/img.
 * **DDPM:** Parameters 28,011,139 (GroupNorm 32); 100 DDIM steps, w=1.5; FID 11.16, Precision 0.796, Recall 0.672, Density 1.117, Coverage 0.834; Speed 524 ms/img (100 steps) / 261 ms/img (50 steps).
+

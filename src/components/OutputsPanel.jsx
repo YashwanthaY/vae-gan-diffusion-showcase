@@ -7,23 +7,23 @@ import OutputsTab4Configs   from './OutputsTab4Configs.jsx';
 import OutputsTab5Datasets  from './OutputsTab5Datasets.jsx';
 
 const TABS = [
+  { id: 0, label: 'Results & Benchmark',     Icon: Table2     },
   { id: 1, label: 'Performance Plots',       Icon: BarChart2  },
-  { id: 0, label: 'Results Tables',          Icon: Table2     },
   { id: 2, label: 'Heatmaps (Param Impact)', Icon: LayoutGrid },
   { id: 3, label: 'Best Model Configs',      Icon: Award      },
   { id: 4, label: 'Synthetic Datasets',      Icon: Database   },
 ];
 
 const TAKEAWAYS = {
+  0: 'Benchmark takeaway: Under standardized 5-seed protocols, DDPM delivers the highest distribution fidelity (FID 11.2) and coverage (0.834), while WGAN-GP collapses with recall 0.000.',
   1: 'Pareto takeaway: DDPM achieves a 10× quality advantage over β-VAE and GANs, with a Pareto-optimal knee at 50 DDIM steps and guidance scale w=1.5.',
-  0: 'Benchmark takeaway: Under standardized 5-seed protocols, DDPM delivers the highest distribution fidelity (FID 11.16) and coverage (0.834), while WGAN-GP collapses with recall 0.000.',
   2: 'Parameter sweep takeaway: Diffusion fidelity saturates past 100 DDIM steps, while classifier-free guidance w > 2.0 trades away recall and sample diversity.',
   3: 'Configuration takeaway: 50 DDIM steps at w=1.5 yields 91% of maximum DDPM quality at nearly half the sampling latency.',
-  4: 'Utility takeaway: Synthetic augmentation increases downstream ResNet-18 accuracy by +4.38% (p=0.030) in data-scarce regimes, but provides no significant gain (+0.54%, p=0.13) with full training sets.',
+  4: 'Utility takeaway: Synthetic augmentation increases downstream ResNet-18 accuracy by +4.38 pts (p=0.030) in data-scarce regimes, but provides no significant gain (+0.54 pts, p=0.13) with full training sets.',
 };
 
-export default function OutputsPanel({ lastRun, studioSliders, activeTab = 1, setActiveTab }) {
-  const [internalTab, setInternalTab] = useState(1);
+export default function OutputsPanel({ lastRun, studioSliders, activeTab = 0, setActiveTab }) {
+  const [internalTab, setInternalTab] = useState(0);
   const currentTab = activeTab !== undefined ? activeTab : internalTab;
   const setTab = setActiveTab || setInternalTab;
 
@@ -77,7 +77,8 @@ export default function OutputsPanel({ lastRun, studioSliders, activeTab = 1, se
   };
 
   return (
-    <section id="findings" className="py-24 relative bg-slate-950 border-t border-slate-900">
+    <section id="benchmark" className="py-24 relative bg-slate-950 border-t border-slate-900">
+      <div id="findings" className="sr-only" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 relative z-10" id="outputs-panel">
 
         {/* Header */}

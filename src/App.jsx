@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
-import ResearchDesignSection from './components/ResearchDesignSection';
-import OutputsPanel from './components/OutputsPanel';
 import GenerativeLab from './components/GenerativeLab';
-import ModelComparison from './components/ModelComparison';
+import MethodStrip from './components/MethodStrip';
+import OutputsPanel from './components/OutputsPanel';
 import EvidenceSection from './components/EvidenceSection';
+import SyntheticDataSection from './components/SyntheticDataSection';
 import DomainGapSection from './components/DomainGapSection';
 import DebuggingJourney from './components/DebuggingJourney';
 import StatisticalLab from './components/StatisticalLab';
@@ -19,27 +19,16 @@ export default function App() {
   const [steps, setSteps] = useState(50);
   const [cfg, setCfg] = useState(1.5);
   const [seed, setSeed] = useState(42);
-  const [activeTab, setActiveTab] = useState(1); // Default to tab 1 (Performance Plots)
+  const [activeTab, setActiveTab] = useState(0); // Default to Benchmark (Table & Plots)
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-slate-950 font-sans">
       <Navbar activeModel={activeModel} setActiveModel={setActiveModel} />
       <main>
-        {/* 1. HERO: The Question & 4 Headline Numeral Cards */}
+        {/* 1. HERO (3D): Overview & 4 Headline Numeral Cards */}
         <HeroSection />
 
-        {/* 2. RESEARCH DESIGN: End-to-End Pipeline & RQ1-RQ5 Cards */}
-        <ResearchDesignSection />
-
-        {/* 3. FINDINGS: Outputs Panel (Default Tab = Performance Plots) */}
-        <OutputsPanel
-          lastRun={lastRun}
-          studioSliders={{ steps, cfg, seed }}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-        />
-
-        {/* 4. VERIFY IT YOURSELF: Live Lab (Moved Below Findings) */}
+        {/* 2. LIVE LAB: Interactive Side-by-Side 4x4 Generation Studio (First after Hero) */}
         <GenerativeLab
           runResult={lastRun}
           setRunResult={setLastRun}
@@ -51,13 +40,24 @@ export default function App() {
           setSeed={setSeed}
         />
 
-        {/* 5. ARCHITECTURAL COMPARISON & SPECIFICATIONS */}
-        <ModelComparison activeModel={activeModel} setActiveModel={setActiveModel} />
+        {/* 3. METHOD STRIP: Compact Protocol Diagram (Statements Only, No Questions) */}
+        <MethodStrip />
 
-        {/* 6. EMPIRICAL EVIDENCE, SAMPLES & TRAJECTORIES */}
+        {/* 4. BENCHMARK: Paper-Style Main Table & Key Empirical Plots */}
+        <OutputsPanel
+          lastRun={lastRun}
+          studioSliders={{ steps, cfg, seed }}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+        />
+
+        {/* 5. EVIDENCE: Empirical Samples, Trajectories & Mode Collapse Analysis */}
         <EvidenceSection />
 
-        {/* 7. DOMAIN GAP: DOWNSTREAM CLASSIFIER UTILITY */}
+        {/* 6. SYNTHETIC DATA: Batch Dataset Builder & PyTorch ZIP Exporter */}
+        <SyntheticDataSection studioSliders={{ steps, cfg, seed }} />
+
+        {/* 7. DOMAIN GAP: Downstream ResNet-18 Classifier Utility */}
         <DomainGapSection />
 
         {/* 8. WGAN-GP POST-MORTEM & FAILURE ANALYSIS */}
