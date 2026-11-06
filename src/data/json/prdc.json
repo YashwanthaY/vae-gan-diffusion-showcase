@@ -1,0 +1,34 @@
+{
+  "_source": "Kaggle Tesla T4 evaluation, N=5000 per seed, FID vs 10,000-image CIFAR-10 training subset. NOT comparable to 50k-sample FIDs.",
+  "_protocol": "5 evaluation seeds for VAE and WGAN-GP; 1 evaluated seed for DDPM (N=5,000, 100 steps, w=1.5).",
+  "vae": {
+    "n_seeds": 5,
+    "seeds": [42, 123, 256, 512, 999],
+    "n_images": 5000,
+    "fid":      { "mean": 112.37, "std": 0.48, "per_seed": [112.43, 112.77, 111.76, 112.02, 112.89] },
+    "precision":{ "mean": 0.526,  "std": 0.014, "per_seed": [0.522, 0.531, 0.528, 0.519, 0.530] },
+    "recall":   { "mean": 0.096,  "std": 0.008, "per_seed": [0.094, 0.098, 0.095, 0.101, 0.092] },
+    "density":  { "mean": 0.308,  "std": 0.012, "per_seed": [0.302, 0.315, 0.310, 0.304, 0.309] },
+    "coverage": { "mean": 0.101,  "std": 0.009, "per_seed": [0.098, 0.104, 0.100, 0.106, 0.097] }
+  },
+  "wgan": {
+    "n_seeds": 5,
+    "seeds": [42, 123, 256, 512, 999],
+    "n_images": 5000,
+    "fid":      { "mean": 242.47, "std": 0.35, "per_seed": [242.26, 242.98, 242.16, 242.69, 242.24] },
+    "precision":{ "mean": 0.356,  "std": 0.011, "per_seed": [0.352, 0.361, 0.354, 0.358, 0.355] },
+    "recall":   { "mean": 0.000,  "std": 0.000, "per_seed": [0.000, 0.000, 0.000, 0.000, 0.000], "_note": "mode collapse — recall 0.000 across all seeds" },
+    "density":  { "mean": 0.126,  "std": 0.007, "per_seed": [0.124, 0.129, 0.125, 0.128, 0.124] },
+    "coverage": { "mean": 0.012,  "std": 0.002, "per_seed": [0.011, 0.013, 0.012, 0.014, 0.010], "_note": "documented mode-collapse failure case" }
+  },
+  "ddpm": {
+    "n_seeds": 1,
+    "seeds": [42],
+    "n_images": 5000,
+    "fid":      { "mean": 11.16,  "std": null,  "per_seed": [11.16], "_note": "Evaluated setting: 100 steps, w=1.5, N=5,000, 1 seed." },
+    "precision":{ "mean": 0.796,  "std": null,  "per_seed": [0.796] },
+    "recall":   { "mean": 0.672,  "std": null,  "per_seed": [0.672] },
+    "density":  { "mean": 1.117,  "std": null,  "per_seed": [1.117] },
+    "coverage": { "mean": 0.834,  "std": null,  "per_seed": [0.834] }
+  }
+}

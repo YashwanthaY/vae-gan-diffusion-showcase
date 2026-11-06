@@ -22,7 +22,7 @@ const TAKEAWAYS = {
   4: 'Utility takeaway: Synthetic augmentation increases downstream ResNet-18 accuracy by +4.38 pts (p=0.030) in data-scarce regimes, but provides no significant gain (+0.54 pts, p=0.13) with full training sets.',
 };
 
-export default function OutputsPanel({ lastRun, studioSliders, activeTab = 0, setActiveTab }) {
+export default function OutputsPanel({ lastRun, studioSliders, activeTab = 0, setActiveTab, onNavigateEvidence }) {
   const [internalTab, setInternalTab] = useState(0);
   const currentTab = activeTab !== undefined ? activeTab : internalTab;
   const setTab = setActiveTab || setInternalTab;
@@ -152,7 +152,7 @@ export default function OutputsPanel({ lastRun, studioSliders, activeTab = 0, se
             className="focus-visible:outline-none"
           >
             {currentTab === id && (
-              id === 0 ? <OutputsTab1Results lastRun={lastRun} /> :
+              id === 0 ? <OutputsTab1Results lastRun={lastRun} studioSliders={studioSliders} onNavigateEvidence={onNavigateEvidence} /> :
               id === 1 ? <OutputsTab2Plots  lastRun={lastRun} studioSliders={studioSliders} /> :
               id === 2 ? <OutputsTab3Heatmaps lastRun={lastRun} studioSliders={studioSliders} /> :
               id === 3 ? <OutputsTab4Configs studioSliders={studioSliders} /> :

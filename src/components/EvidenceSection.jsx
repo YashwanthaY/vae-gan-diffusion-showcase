@@ -1,11 +1,68 @@
-import React, { useState } from 'react';
-import { Eye, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Eye, AlertTriangle, X, ZoomIn } from 'lucide-react';
 import { CIFAR10_CLASSES } from '../config.js';
-import { CANONICAL_METRICS } from '../data/metrics';
+import { CANONICAL_METRICS } from '../data/metrics.js';
+import TileGrid from './TileGrid.jsx';
+import { assemble16Tiles } from '../utils/tileAssembler.js';
 
-export default function EvidenceSection() {
+export default function EvidenceSection({ activeTab: externalTab, setActiveTab: setExternalTab }) {
+  const [internalTab, setInternalTab] = useState('classes');
+  const activeTab = externalTab !== undefined ? externalTab : internalTab;
+  const setActiveTab = setExternalTab || setInternalTab;
+
   const [activeClassIdx, setActiveClassIdx] = useState(5); // dog
-  const [activeTab, setActiveTab] = useState('classes'); // classes | trajectory | interp | memorisation | wgan_failure
+  const [classTiles, setClassTiles] = useState([]);
+  const [classTilesLoading, setClassTilesLoading] = useState(false);
+
+  const [wganTiles, setWganTiles] = useState([]);
+  const [wganTilesLoading, setWganTilesLoading] = useState(false);
+
+  const [selectedTile, setSelectedTile] = useState(null);
+
+  // Load 16 discrete tiles for selected class
+  useEffect(() => {
+    let isCancelled = false;
+    setClassTilesLoading(true);
+    const clsName = CIFAR10_CLASSES[activeClassIdx].name;
+
+    assemble16Tiles({
+      modelKey: 'ddpm',
+      className: clsName,
+      seed: 42,
+    }).then(tiles => {
+      if (!isCancelled) {
+        setClassTiles(tiles);
+        setClassTilesLoading(false);
+      }
+    }).catch(err => {
+      console.warn('Failed loading class tiles:', err);
+      if (!isCancelled) setClassTilesLoading(false);
+    });
+
+    return () => { isCancelled = true; };
+  }, [activeClassIdx]);
+
+  // Load 16 discrete tiles for WGAN-GP failure panel
+  useEffect(() => {
+    let isCancelled = false;
+    setWganTilesLoading(true);
+
+    assemble16Tiles({
+      modelKey: 'wgan',
+      className: 'airplane',
+      seed: 42,
+    }).then(tiles => {
+      if (!isCancelled) {
+        setWganTiles(tiles);
+        setWganTilesLoading(false);
+      }
+    }).catch(err => {
+      console.warn('Failed loading WGAN tiles:', err);
+      if (!isCancelled) setWganTilesLoading(false);
+    });
+
+    return () => { isCancelled = true; };
+  }, []);
 
   return (
     <section id="evidence" className="py-24 relative bg-slate-950 border-t border-slate-900">
@@ -27,7 +84,7 @@ export default function EvidenceSection() {
         {/* Sub-navigation tabs: 5 canonical tabs */}
         <div className="flex flex-wrap gap-2 justify-center p-1.5 rounded-2xl bg-slate-900/80 border border-slate-800 max-w-fit mx-auto">
           {[
-            { id: 'classes',      label: 'Class Explorer' },
+            { id: 'classes',      label: 'Class Explorer (4×4)' },
             { id: 'trajectory',   label: 'Denoising Trajectory' },
             { id: 'interp',       label: 'VAE Latent Interpolation' },
             { id: 'memorisation', label: 'Memorisation Check' },
@@ -51,9 +108,9 @@ export default function EvidenceSection() {
         {activeTab === 'classes' && (
           <div className="p-6 sm:p-8 rounded-3xl glass-panel border border-slate-800 space-y-6">
             <div className="space-y-2">
-              <h3 className="text-lg font-bold text-white">Class-Conditional Generation Explorer</h3>
+              <h3 className="text-lg font-bold text-white">Class-Conditional Generation Explorer (4×4 Grid = 16 Samples)</h3>
               <p className="text-xs font-mono text-slate-400">
-                The DDPM is conditioned on the CIFAR-10 class label (classes 0 through 9). Browse per-class samples or view the class matrix.
+                The DDPM is conditioned on CIFAR-10 class labels (0 through 9). Each grid renders 16 discrete samples generated with DDIM-100 and w = 1.5. Click any tile to inspect.
               </p>
             </div>
 
@@ -73,19 +130,20 @@ export default function EvidenceSection() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-xs font-mono">
-                  <span className="font-bold text-cyan-300">Class: {CIFAR10_CLASSES[activeClassIdx].label} ({activeClassIdx})</span>
-                  <span className="text-slate-400">100 DDIM steps, w = 1.5</span>
+                  <span className="font-bold text-cyan-300">Class {activeClassIdx}: {CIFAR10_CLASSES[activeClassIdx].label} (4×4 = 16 Images)</span>
+                  <span className="text-slate-400">100 DDIM steps · w = 1.5</span>
                 </div>
-                <div className="aspect-square rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center">
-                  <img
-                    src={`/img/grids/ddpm_class${activeClassIdx}_${CIFAR10_CLASSES[activeClassIdx].name}.png`}
-                    onError={(e) => { e.target.src = '/img/grids/ddpm_seed42.png'; }}
-                    alt={`DDPM Class ${CIFAR10_CLASSES[activeClassIdx].label}`}
-                    className="w-full h-full object-cover"
-                    style={{ imageRendering: 'pixelated' }}
+                <div className="max-w-[420px] mx-auto md:mx-0">
+                  <TileGrid
+                    tiles={classTiles}
+                    rows={4}
+                    cols={4}
+                    isLoading={classTilesLoading}
+                    onTileClick={(src) => setSelectedTile({ src, title: `DDPM Class ${CIFAR10_CLASSES[activeClassIdx].label}` })}
+                    modelName={`DDPM Class ${CIFAR10_CLASSES[activeClassIdx].label}`}
                   />
                 </div>
               </div>
@@ -93,14 +151,14 @@ export default function EvidenceSection() {
                 <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
                   <div className="text-cyan-400 font-bold">Class Conditioning Mechanism</div>
                   <p className="text-slate-400 leading-relaxed">
-                    Labels are mapped through a learned embedding table and added directly into the UNet residual blocks. Classifier-free guidance combines unconditional and conditional predictions:
+                    Labels are mapped through a learned embedding table and added directly into UNet residual blocks. Classifier-free guidance combines unconditional and conditional predictions:
                   </p>
                   <code className="block p-2 rounded bg-slate-950 text-cyan-300 border border-slate-800 text-[11px]">
-                    ε = ε_uncond + w * (ε_cond - ε_uncond)
+                    ε = ε_uncond + w · (ε_cond - ε_uncond)
                   </code>
                 </div>
-                <p className="text-slate-400 text-[11px]">
-                  Setting w=0 produces unconditional generation, while w=1.5 sharpens class-specific features without mode collapse.
+                <p className="text-slate-400 text-[11px] leading-relaxed">
+                  Setting w=0 produces unconditional generation, while w=1.5 sharpens class-specific features without mode collapse. Every tile above is rendered at 32×32 resolution with sharp pixelated scaling.
                 </p>
               </div>
             </div>
@@ -209,26 +267,87 @@ export default function EvidenceSection() {
               In this study, WGAN-GP is retained as a fully documented generative failure case. The discriminator and generator reached an adversarial equilibrium that produced collapsed blob-like patterns across latent seeds.
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
-              <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/20">
-                <div className="text-slate-500">Evaluated FID:</div>
-                <div className="text-amber-400 text-lg font-bold">{CANONICAL_METRICS.wgan.fid}</div>
-                <div className="text-[10px] text-slate-500">vs DDPM {CANONICAL_METRICS.ddpm.fid}</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-xs font-mono">
+                  <span className="font-bold text-amber-400">16 Generated Samples (Mode Collapse)</span>
+                  <span className="text-slate-500">Seed 42 · 150 epochs</span>
+                </div>
+                <div className="max-w-[420px] mx-auto md:mx-0">
+                  <TileGrid
+                    tiles={wganTiles}
+                    rows={4}
+                    cols={4}
+                    isLoading={wganTilesLoading}
+                    onTileClick={(src) => setSelectedTile({ src, title: 'WGAN-GP Mode Collapse Tile' })}
+                    modelName="WGAN-GP Collapse"
+                  />
+                </div>
               </div>
-              <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/20">
-                <div className="text-slate-500">Precision / Recall:</div>
-                <div className="text-amber-400 text-lg font-bold">Recall {CANONICAL_METRICS.wgan.recall}</div>
-                <div className="text-[10px] text-slate-500">Coverage {CANONICAL_METRICS.wgan.coverage}</div>
-              </div>
-              <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/20">
-                <div className="text-slate-500">Architecture:</div>
-                <div className="text-slate-200 font-bold">{CANONICAL_METRICS.wgan.params}</div>
-                <div className="text-[10px] text-slate-500">150 epochs, 1-Lipschitz GP</div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
+                  <div className="p-3.5 rounded-xl bg-slate-900 border border-amber-500/20">
+                    <div className="text-slate-500 text-[11px]">Evaluated FID:</div>
+                    <div className="text-amber-400 text-lg font-bold">{CANONICAL_METRICS.wgan.fid}</div>
+                    <div className="text-[10px] text-slate-500">vs DDPM {CANONICAL_METRICS.ddpm.fid}</div>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-900 border border-amber-500/20">
+                    <div className="text-slate-500 text-[11px]">Precision / Recall:</div>
+                    <div className="text-amber-400 text-base font-bold">Recall {CANONICAL_METRICS.wgan.recall}</div>
+                    <div className="text-[10px] text-slate-500">Coverage {CANONICAL_METRICS.wgan.coverage}</div>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-900 border border-amber-500/20">
+                    <div className="text-slate-500 text-[11px]">Architecture:</div>
+                    <div className="text-slate-200 font-bold">{CANONICAL_METRICS.wgan.params}</div>
+                    <div className="text-[10px] text-slate-500">150 epochs, 1-Lipschitz GP</div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] font-mono text-slate-400 space-y-2">
+                  <div className="text-amber-300 font-bold">Academic Failure Documentation:</div>
+                  <p>
+                    Rule R6 Compliance: WGAN-GP is never presented as a success. It demonstrates the inherent stability advantages of diffusion score-matching over adversarial minimax games under limited hyperparameter tuning.
+                  </p>
+                  <p className="text-slate-500">
+                    All 16 tiles above display the identical untextured circular artifact regardless of latent random vector input.
+                  </p>
+                </div>
               </div>
             </div>
+          </div>
+        )}
 
-            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] font-mono text-slate-400">
-              Rule R6 Compliance: WGAN-GP is never presented as a success. It demonstrates the inherent stability advantages of diffusion score-matching over adversarial minimax games under limited hyperparameter tuning.
+        {/* Lightbox Modal */}
+        {selectedTile && (
+          <div
+            className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => setSelectedTile(null)}
+          >
+            <div
+              className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-white font-mono">{selectedTile.title}</span>
+                <button
+                  onClick={() => setSelectedTile(null)}
+                  className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="aspect-square w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center p-2">
+                <img
+                  src={selectedTile.src}
+                  alt={selectedTile.title}
+                  className="w-full h-full object-contain"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              </div>
+              <div className="text-[11px] font-mono text-slate-400 text-center">
+                Native CIFAR-10 Resolution: 32×32 RGB (Pixelated Scaling)
+              </div>
             </div>
           </div>
         )}

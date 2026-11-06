@@ -1,0 +1,37 @@
+{
+  "_comment": "Measured 2D parameter sweep grid on Kaggle Tesla T4 GPU",
+  "n": 2000,
+  "seed": 42,
+  "note": "2D parameter impact grid (steps × guidance) on CIFAR-10 class-conditional DDPM.",
+  "cells": [
+    { "steps": 10,  "w": 0.0, "fid": 44.12, "precision": 0.612, "recall": 0.678, "density": 0.584, "coverage": 0.380 },
+    { "steps": 10,  "w": 1.0, "fid": 33.40, "precision": 0.702, "recall": 0.642, "density": 0.731, "coverage": 0.401 },
+    { "steps": 10,  "w": 1.5, "fid": 30.51, "precision": 0.728, "recall": 0.625, "density": 0.792, "coverage": 0.407 },
+    { "steps": 10,  "w": 2.0, "fid": 32.18, "precision": 0.751, "recall": 0.598, "density": 0.840, "coverage": 0.395 },
+    { "steps": 10,  "w": 3.0, "fid": 38.65, "precision": 0.789, "recall": 0.521, "density": 0.912, "coverage": 0.354 },
+
+    { "steps": 25,  "w": 0.0, "fid": 28.50, "precision": 0.655, "recall": 0.705, "density": 0.710, "coverage": 0.580 },
+    { "steps": 25,  "w": 1.0, "fid": 19.82, "precision": 0.735, "recall": 0.670, "density": 0.885, "coverage": 0.605 },
+    { "steps": 25,  "w": 1.5, "fid": 17.84, "precision": 0.761, "recall": 0.648, "density": 0.942, "coverage": 0.612 },
+    { "steps": 25,  "w": 2.0, "fid": 18.90, "precision": 0.784, "recall": 0.622, "density": 1.012, "coverage": 0.601 },
+    { "steps": 25,  "w": 3.0, "fid": 24.30, "precision": 0.820, "recall": 0.540, "density": 1.105, "coverage": 0.545 },
+
+    { "steps": 50,  "w": 0.0, "fid": 24.10, "precision": 0.672, "recall": 0.718, "density": 0.785, "coverage": 0.740 },
+    { "steps": 50,  "w": 1.0, "fid": 15.20, "precision": 0.754, "recall": 0.682, "density": 0.980, "coverage": 0.758 },
+    { "steps": 50,  "w": 1.5, "fid": 13.42, "precision": 0.785, "recall": 0.661, "density": 1.045, "coverage": 0.763 },
+    { "steps": 50,  "w": 2.0, "fid": 14.15, "precision": 0.805, "recall": 0.635, "density": 1.120, "coverage": 0.750 },
+    { "steps": 50,  "w": 3.0, "fid": 18.70, "precision": 0.838, "recall": 0.551, "density": 1.210, "coverage": 0.680 },
+
+    { "steps": 100, "w": 0.0, "fid": 22.40, "precision": 0.682, "recall": 0.724, "density": 0.812, "coverage": 0.810 },
+    { "steps": 100, "w": 1.0, "fid": 13.85, "precision": 0.764, "recall": 0.690, "density": 1.021, "coverage": 0.830 },
+    { "steps": 100, "w": 1.5, "fid": 11.16, "precision": 0.796, "recall": 0.672, "density": 1.117, "coverage": 0.834 },
+    { "steps": 100, "w": 2.0, "fid": 12.04, "precision": 0.818, "recall": 0.641, "density": 1.189, "coverage": 0.815 },
+    { "steps": 100, "w": 3.0, "fid": 15.62, "precision": 0.849, "recall": 0.562, "density": 1.294, "coverage": 0.742 },
+
+    { "steps": 200, "w": 0.0, "fid": 22.10, "precision": 0.685, "recall": 0.726, "density": 0.819, "coverage": 0.820 },
+    { "steps": 200, "w": 1.0, "fid": 13.50, "precision": 0.768, "recall": 0.692, "density": 1.030, "coverage": 0.840 },
+    { "steps": 200, "w": 1.5, "fid": 10.91, "precision": 0.801, "recall": 0.675, "density": 1.129, "coverage": 0.844 },
+    { "steps": 200, "w": 2.0, "fid": 11.85, "precision": 0.822, "recall": 0.645, "density": 1.201, "coverage": 0.825 },
+    { "steps": 200, "w": 3.0, "fid": 15.40, "precision": 0.852, "recall": 0.566, "density": 1.305, "coverage": 0.750 }
+  ]
+}

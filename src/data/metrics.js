@@ -1,7 +1,7 @@
-import prdc from '../../public/data/json/prdc.json';
-import speed from '../../public/data/json/speed.json';
-import modelsInfo from '../../public/data/json/models_info.json';
-import prov from '../../public/data/json/metrics_provisional.json';
+import prdc from './json/prdc.json';
+import speed from './json/speed.json';
+import modelsInfo from './json/models_info.json';
+import prov from './json/metrics_provisional.json';
 
 /**
  * SINGLE SOURCE OF TRUTH FOR METRICS (src/data/metrics.js)

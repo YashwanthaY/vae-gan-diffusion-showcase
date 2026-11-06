@@ -1,0 +1,22 @@
+{
+  "_comment": "Measured sweep points on Kaggle Tesla T4 GPU",
+  "n": 2000,
+  "seed": 42,
+  "note": "CIFAR-10 class-conditional DDPM parameter sweep on Kaggle Tesla T4. N=2,000 per sweep point (100-step w=1.5 is the evaluated N=5,000 checkpoint).",
+  "steps": [
+    { "steps": 10,  "w": 1.5, "n": 2000, "fid": 30.51, "precision": 0.728, "recall": 0.625, "density": 0.792, "coverage": 0.407 },
+    { "steps": 25,  "w": 1.5, "n": 2000, "fid": 17.84, "precision": 0.761, "recall": 0.648, "density": 0.942, "coverage": 0.612 },
+    { "steps": 50,  "w": 1.5, "n": 2000, "fid": 13.42, "precision": 0.785, "recall": 0.661, "density": 1.045, "coverage": 0.763 },
+    { "steps": 100, "w": 1.5, "n": 5000, "fid": 11.16, "precision": 0.796, "recall": 0.672, "density": 1.117, "coverage": 0.834 },
+    { "steps": 150, "w": 1.5, "n": 2000, "fid": 10.98, "precision": 0.799, "recall": 0.674, "density": 1.124, "coverage": 0.841 },
+    { "steps": 200, "w": 1.5, "n": 2000, "fid": 10.91, "precision": 0.801, "recall": 0.675, "density": 1.129, "coverage": 0.844 }
+  ],
+  "guidance": [
+    { "w": 0.0, "steps": 100, "n": 2000, "fid": 22.40, "precision": 0.682, "recall": 0.724, "density": 0.812, "coverage": 0.810 },
+    { "w": 1.0, "steps": 100, "n": 2000, "fid": 13.85, "precision": 0.764, "recall": 0.690, "density": 1.021, "coverage": 0.830 },
+    { "w": 1.5, "steps": 100, "n": 5000, "fid": 11.16, "precision": 0.796, "recall": 0.672, "density": 1.117, "coverage": 0.834 },
+    { "w": 2.0, "steps": 100, "n": 2000, "fid": 12.04, "precision": 0.818, "recall": 0.641, "density": 1.189, "coverage": 0.815 },
+    { "w": 3.0, "steps": 100, "n": 2000, "fid": 15.62, "precision": 0.849, "recall": 0.562, "density": 1.294, "coverage": 0.742 },
+    { "w": 4.0, "steps": 100, "n": 2000, "fid": 21.30, "precision": 0.865, "recall": 0.478, "density": 1.341, "coverage": 0.638 }
+  ]
+}

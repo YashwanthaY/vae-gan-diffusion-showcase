@@ -104,17 +104,15 @@ export default function Navbar({ activeModel, setActiveModel }) {
             </div>
             <div className="flex flex-col">
               <div className="flex items-center space-x-1.5">
-                <span className="font-heading font-black text-sm sm:text-base lg:text-lg tracking-tight text-white group-hover:text-cyan-300 transition-colors whitespace-nowrap">
-                  Generative Model Study
+                <span className="font-heading font-black text-base lg:text-lg tracking-tight text-white group-hover:text-cyan-300 transition-colors whitespace-nowrap">
+                  SYNTHESIS<span className="text-cyan-400">3D</span>
                 </span>
                 <span className="px-2 py-0.5 text-[10px] font-mono tracking-wider font-semibold bg-cyan-950/90 text-cyan-300 border border-cyan-700/60 rounded-full whitespace-nowrap hidden sm:inline-block shadow-sm">
-                  CIFAR-10
+                  CIFAR-10 STUDY
                 </span>
               </div>
               <p className="text-[10px] text-slate-400 font-mono whitespace-nowrap flex items-center space-x-1 font-medium">
-                <span>AJIET CSE (AI & ML)</span>
-                <span className="text-slate-500">·</span>
-                <span className="text-slate-300 font-semibold">{RESEARCH_PROJECT.author}</span>
+                <span>by {RESEARCH_PROJECT.author}</span>
               </p>
             </div>
           </div>

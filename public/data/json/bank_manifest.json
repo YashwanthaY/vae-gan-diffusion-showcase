@@ -1,5 +1,54 @@
 {
-  "_comment": "Stub — replace with Kaggle 'bank' stage output",
-  "_pending": true,
-  "files": []
+  "version": "1.0.0",
+  "grid_format": "4x4",
+  "tile_size": 32,
+  "n_tiles": 16,
+  "models": {
+    "vae": {
+      "seeds": [42, 123, 256],
+      "files": {
+        "seed42": "/img/grids/vae_seed42.png",
+        "seed123": "/img/grids/vae_seed123.png",
+        "seed256": "/img/grids/vae_seed256.png"
+      }
+    },
+    "wgan": {
+      "seeds": [42, 123, 256],
+      "files": {
+        "seed42": "/img/grids/wgan_seed42.png",
+        "seed123": "/img/grids/wgan_seed123.png",
+        "seed256": "/img/grids/wgan_seed256.png"
+      }
+    },
+    "ddpm": {
+      "seeds": [42, 123, 256],
+      "classes": [
+        "airplane",
+        "automobile",
+        "bird",
+        "cat",
+        "deer",
+        "dog",
+        "frog",
+        "horse",
+        "ship",
+        "truck"
+      ],
+      "files": {
+        "airplane": "/img/grids/ddpm_class0_plane.png",
+        "automobile": "/img/grids/ddpm_class1_car.png",
+        "bird": "/img/grids/ddpm_class2_bird.png",
+        "cat": "/img/grids/ddpm_class3_cat.png",
+        "deer": "/img/grids/ddpm_class4_deer.png",
+        "dog": "/img/grids/ddpm_class5_dog.png",
+        "frog": "/img/grids/ddpm_class6_frog.png",
+        "horse": "/img/grids/ddpm_class7_horse.png",
+        "ship": "/img/grids/ddpm_class8_ship.png",
+        "truck": "/img/grids/ddpm_class9_truck.png",
+        "seed42": "/img/grids/ddpm_seed42.png",
+        "seed123": "/img/grids/ddpm_seed123.png",
+        "seed256": "/img/grids/ddpm_seed256.png"
+      }
+    }
+  }
 }

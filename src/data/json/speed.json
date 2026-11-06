@@ -1,0 +1,13 @@
+{
+  "_source": "Measured on Kaggle Tesla T4 GPU. Mean over 5 seeds; units = milliseconds per image.",
+  "_note": "DDPM speed scales linearly with steps. ddpm100_ms_per_img is the reference for Pareto plots: ms(steps) = ddpm100_ms_per_img * steps / 100.",
+  "vae_ms_per_img":     0.41,
+  "vae_ms_per_img_range": [0.41, 0.49],
+  "wgan_ms_per_img":    0.80,
+  "wgan_ms_per_img_range": [0.79, 0.80],
+  "ddpm50_ms_per_img":  261,
+  "ddpm100_ms_per_img": 524,
+  "ddpm100_ms_per_img_range": [518, 532],
+  "peak_mem_gb":        1.95,
+  "hardware":           "NVIDIA Tesla T4 (Kaggle free tier)"
+}

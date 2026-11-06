@@ -1,0 +1,22 @@
+{
+  "_comment": "IS, LPIPS, SSIM values that carry PROVISIONAL badges. DDPM IS and LPIPS/SSIM are provisional pending full evaluation. Show with visible PROVISIONAL badge.",
+  "vae": {
+    "IS":    { "mean": null,  "std": null,   "provisional": ["IS"],   "_pending": true },
+    "LPIPS": { "mean": 0.2703, "std": 0.0013, "provisional": ["LPIPS"], "_note": "provisional — treat with caution" },
+    "SSIM":  { "mean": 0.2276, "std": 0.0014, "provisional": ["SSIM"],
+               "note": "computed between unpaired generated and real images: a weak quality indicator" }
+  },
+  "wgan": {
+    "IS":    { "mean": null,  "std": null,   "provisional": ["IS"],   "_pending": true },
+    "LPIPS": { "mean": 0.3683, "std": 0.0010, "provisional": ["LPIPS"], "_note": "provisional" },
+    "SSIM":  { "mean": 0.1924, "std": 0.0004, "provisional": ["SSIM"],
+               "note": "computed between unpaired generated and real images: a weak quality indicator" }
+  },
+  "ddpm": {
+    "IS":    { "mean": 9.35,  "std": 0.09,  "provisional": ["IS"],
+               "_note": "provisional — reported from checkpoint evaluation, not the 5-seed sweep" },
+    "LPIPS": { "mean": 0.2233, "std": 0.0016, "provisional": ["LPIPS"], "_note": "provisional" },
+    "SSIM":  { "mean": 0.2283, "std": 0.0008, "provisional": ["SSIM"],
+               "note": "computed between unpaired generated and real images: a weak quality indicator" }
+  }
+}

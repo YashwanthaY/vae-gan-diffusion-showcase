@@ -1,0 +1,11 @@
+{
+  "_comment": "Parameter counts and architectural details from model checkpoints",
+  "vae_total": 16901123,
+  "vae_display": "16.9 M",
+  "wgan_generator": 3557123,
+  "wgan_critic": 4656641,
+  "wgan_display": "3.56 M (G) / 4.66 M (critic)",
+  "ddpm_total": 28011139,
+  "ddpm_display": "28.0 M",
+  "ddpm_note": "UNet with GroupNorm(32), class-conditional (10 classes)"
+}

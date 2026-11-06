@@ -2,6 +2,8 @@ import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { Play, Pause, X, Download, AlertTriangle, CheckCircle2, RotateCcw, Shuffle, Layers } from 'lucide-react';
 import { generateStudio } from '../services/gradioClient.js';
 import { GRID, TILE, CIFAR10_CLASSES } from '../config.js';
+import { assemble16Tiles } from '../utils/tileAssembler.js';
+import TileGrid from './TileGrid.jsx';
 
 /**
  * Robustly slice a 4x4 image (base64, data-URL, or local path) into 16 exact 32x32 PNGs.
@@ -184,7 +186,15 @@ export default function OutputsTab5Datasets({ studioSliders }) {
           });
 
           const tileSheet = result?.per_model?.ddpm?.tile_sheet_png_b64 || result?.per_model?.ddpm?.grid_png_b64;
-          const tiles = tileSheet ? await sliceTileSheet(tileSheet) : [];
+          let tiles = tileSheet ? await sliceTileSheet(tileSheet) : [];
+          if (tiles.length < 16) {
+            tiles = await assemble16Tiles({
+              modelKey: 'ddpm',
+              className: cls.name,
+              primarySource: tileSheet,
+              seed: bSeed,
+            });
+          }
           batches.push({
             tiles,
             classIdx: clsIdx,
@@ -441,22 +451,9 @@ export default function OutputsTab5Datasets({ studioSliders }) {
             </div>
 
             {/* 4x4 Preview Box */}
-            <div className="w-full aspect-square max-w-[360px] mx-auto rounded-xl border border-slate-800 bg-slate-900/60 p-2 flex items-center justify-center overflow-hidden">
+            <div className="w-full aspect-square max-w-[360px] mx-auto rounded-xl border border-slate-800 bg-slate-900/60 p-1 flex items-center justify-center overflow-hidden">
               {lastBatchTiles.length > 0 ? (
-                <div
-                  className="grid grid-cols-4 grid-rows-4 gap-1 w-full h-full"
-                  style={{ imageRendering: 'pixelated' }}
-                >
-                  {lastBatchTiles.map((tileSrc, idx) => (
-                    <img
-                      key={idx}
-                      src={tileSrc}
-                      alt={`Batch tile ${idx}`}
-                      className="w-full h-full object-cover rounded bg-slate-950 border border-slate-800/60"
-                      style={{ imageRendering: 'pixelated' }}
-                    />
-                  ))}
-                </div>
+                <TileGrid tiles={lastBatchTiles} rows={4} cols={4} isLoading={building && lastBatchTiles.length === 0} />
               ) : (
                 <div className="text-center p-6 space-y-2">
                   <div className="w-12 h-12 mx-auto rounded-xl bg-slate-800/80 border border-slate-700 flex items-center justify-center text-slate-400">

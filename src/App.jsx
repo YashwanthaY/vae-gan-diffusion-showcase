@@ -20,13 +20,20 @@ export default function App() {
   const [cfg, setCfg] = useState(1.5);
   const [seed, setSeed] = useState(42);
   const [activeTab, setActiveTab] = useState(0); // Default to Benchmark (Table & Plots)
+  const [evidenceTab, setEvidenceTab] = useState('classes');
+
+  const handleNavigateEvidence = (tabId) => {
+    setEvidenceTab(tabId);
+    const el = document.getElementById('evidence');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-slate-950 font-sans">
       <Navbar activeModel={activeModel} setActiveModel={setActiveModel} />
       <main>
-        {/* 1. HERO (3D): Overview & 4 Headline Numeral Cards */}
-        <HeroSection />
+        {/* 1. HERO (3D): Restored SYNTHESIS 3D Overview & 4 Headline Numeral Cards */}
+        <HeroSection activeModel={activeModel} setActiveModel={setActiveModel} />
 
         {/* 2. LIVE LAB: Interactive Side-by-Side 4x4 Generation Studio (First after Hero) */}
         <GenerativeLab
@@ -49,10 +56,14 @@ export default function App() {
           studioSliders={{ steps, cfg, seed }}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          onNavigateEvidence={handleNavigateEvidence}
         />
 
         {/* 5. EVIDENCE: Empirical Samples, Trajectories & Mode Collapse Analysis */}
-        <EvidenceSection />
+        <EvidenceSection
+          activeTab={evidenceTab}
+          setActiveTab={setEvidenceTab}
+        />
 
         {/* 6. SYNTHETIC DATA: Batch Dataset Builder & PyTorch ZIP Exporter */}
         <SyntheticDataSection studioSliders={{ steps, cfg, seed }} />

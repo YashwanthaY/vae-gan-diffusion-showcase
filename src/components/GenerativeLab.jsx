@@ -7,6 +7,10 @@ import {
 import { GRID, DEFAULTS, CIFAR10_CLASSES, resolvePromptToClass } from '../config.js';
 import { generateStudio, getCachedStudioResponse } from '../services/gradioClient.js';
 import { FID_DISCLAIMER } from '../data/results.js';
+import TileGrid from './TileGrid.jsx';
+import { assemble16Tiles } from '../utils/tileAssembler.js';
+import { computeAllTileMetrics } from '../utils/imageMetrics.js';
+import OutputAnalysisPanel from './OutputAnalysisPanel.jsx';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -35,35 +39,22 @@ function ModeBadge({ mode }) {
   );
 }
 
-function SkeletonGrid() {
-  return (
-    <div className="space-y-2 animate-pulse w-full aspect-square">
-      <div className="w-full h-full rounded-2xl bg-slate-800/70" />
-    </div>
-  );
-}
-
-function downloadImage(src, filename) {
-  const a = document.createElement('a');
-  a.href = formatImageSrc(src);
-  a.download = filename;
-  a.click();
-}
-
-// ─── Lightbox ─────────────────────────────────────────────────────────────────
 function Lightbox({ src, label, onClose }) {
   return (
     <AnimatePresence>
       <motion.div
-        key="lb"
-        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-md p-4"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4"
         onClick={onClose}
       >
         <motion.div
-          className="relative max-w-xl w-full"
-          initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
-          onClick={(e) => e.stopPropagation()}
+          initial={{ scale: 0.95 }}
+          animate={{ scale: 1 }}
+          exit={{ scale: 0.95 }}
+          className="relative max-w-2xl w-full bg-slate-900 border border-slate-700 rounded-3xl p-4 shadow-2xl"
+          onClick={e => e.stopPropagation()}
         >
           <button
             onClick={onClose}
@@ -91,8 +82,8 @@ const MODEL_CFG = {
   ddpm: { label: 'DDPM',     color: 'cyan',    border: 'border-cyan-500/40',   tag: 'glass-card-ddpm', arch: '28.01 M UNet' },
 };
 
-function ModelGridCard({ modelKey, runData, isLoading }) {
-  const [lightbox, setLightbox] = useState(false);
+function ModelGridCard({ modelKey, runData, isLoading, tiles = [] }) {
+  const [lightboxTile, setLightboxTile] = useState(null);
   const cfg = MODEL_CFG[modelKey];
   const data = runData?.per_model?.[modelKey];
 
@@ -107,53 +98,27 @@ function ModelGridCard({ modelKey, runData, isLoading }) {
       </div>
 
       {/* Grid: 4x4, Square aspect ratio filling the card, at least 480px on desktop */}
-      <div className="w-full aspect-square rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 relative group flex items-center justify-center">
-        {isLoading ? (
-          <SkeletonGrid />
-        ) : data?.grid_png_b64 ? (
-          <>
-            <div
-              className="w-full h-full cursor-zoom-in relative"
-              onClick={() => setLightbox(true)}
-            >
-              <img
-                src={formatImageSrc(data.grid_png_b64)}
-                alt={`${cfg.label} 16-image 4×4 grid`}
-                className="w-full h-full object-cover"
-                style={{ imageRendering: 'pixelated' }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                <Maximize2 className="w-7 h-7 text-white" />
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="text-center space-y-1">
-            <ImageIcon className="w-8 h-8 text-slate-600 mx-auto" />
-            <p className="text-xs text-slate-500 font-mono">Loading reference tiles...</p>
-          </div>
-        )}
+      <div className="w-full aspect-square rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 relative flex items-center justify-center">
+        <TileGrid
+          tiles={tiles}
+          rows={4}
+          cols={4}
+          isLoading={isLoading}
+          modelName={cfg.label}
+          onTileClick={(tileSrc) => setLightboxTile(tileSrc)}
+        />
       </div>
 
       {/* Grid footer specs */}
       <div className="flex items-center justify-between text-xs font-mono text-slate-400 pt-1">
         <span>{GRID.n} images (4×4) · {data?.seconds?.toFixed(3) ?? '?'}s · passes {modelKey === 'ddpm' ? (runData?.cfg > 0 ? (runData?.steps ?? 50) * 2 : (runData?.steps ?? 50)) : 1}</span>
-        {data?.grid_png_b64 && (
-          <button
-            onClick={() => downloadImage(data.grid_png_b64, `${modelKey}_grid_seed${runData?.seed ?? 42}.png`)}
-            className={`flex items-center space-x-1 text-${cfg.color}-400 hover:text-${cfg.color}-200 transition-colors cursor-pointer font-bold`}
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>PNG</span>
-          </button>
-        )}
       </div>
 
-      {lightbox && data?.grid_png_b64 && (
+      {lightboxTile && (
         <Lightbox
-          src={data.grid_png_b64}
-          label={`${cfg.label} · seed ${runData?.seed} · ${runData?.steps} steps · CFG ${runData?.cfg}`}
-          onClose={() => setLightbox(false)}
+          src={lightboxTile}
+          label={`${cfg.label} · seed ${runData?.seed ?? 42} · 32×32 pixel tile`}
+          onClose={() => setLightboxTile(null)}
         />
       )}
     </div>
@@ -196,6 +161,11 @@ export default function GenerativeLab({
   const setRunResult = setExternalRunResult || setInternalRunResult;
   const timerRef = useRef(null);
 
+  // Discrete 4x4 tiles per model and real-time computer vision metrics
+  const [modelTiles, setModelTiles] = useState({ vae: [], wgan: [], ddpm: [] });
+  const [computedMetrics, setComputedMetrics] = useState({ vae: null, wgan: null, ddpm: null });
+  const [runHistory, setRunHistory] = useState([]);
+
   const randomiseSeed = () => setSeed(Math.floor(Math.random() * 100000));
 
   // Automatically load initial reference samples on mount so the studio is never empty
@@ -206,6 +176,69 @@ export default function GenerativeLab({
       });
     }
   }, [runResult, setRunResult]);
+
+  // Whenever runResult updates, assemble 16 discrete tiles and compute image metrics
+  useEffect(() => {
+    if (!runResult) return;
+
+    let isMounted = true;
+    const processTiles = async () => {
+      const clsName = runResult.class || 'dog';
+      const curSeed = runResult.seed || 42;
+
+      const [vaeTiles, wganTiles, ddpmTiles] = await Promise.all([
+        assemble16Tiles({
+          modelKey: 'vae',
+          className: clsName,
+          primarySource: runResult.per_model?.vae?.grid_png_b64,
+          seed: curSeed,
+        }),
+        assemble16Tiles({
+          modelKey: 'wgan',
+          className: clsName,
+          primarySource: runResult.per_model?.wgan?.grid_png_b64,
+          seed: curSeed,
+        }),
+        assemble16Tiles({
+          modelKey: 'ddpm',
+          className: clsName,
+          primarySource: runResult.per_model?.ddpm?.grid_png_b64,
+          seed: curSeed,
+        }),
+      ]);
+
+      if (!isMounted) return;
+      setModelTiles({ vae: vaeTiles, wgan: wganTiles, ddpm: ddpmTiles });
+
+      // Compute mathematical metrics across 16 tiles
+      const [vaeM, wganM, ddpmM] = await Promise.all([
+        computeAllTileMetrics(vaeTiles),
+        computeAllTileMetrics(wganTiles),
+        computeAllTileMetrics(ddpmTiles),
+      ]);
+
+      if (!isMounted) return;
+      setComputedMetrics({ vae: vaeM, wgan: wganM, ddpm: ddpmM });
+
+      setRunHistory((prev) => {
+        const next = [
+          {
+            seed: curSeed,
+            class: clsName,
+            steps: runResult.steps,
+            vae: vaeM,
+            wgan: wganM,
+            ddpm: ddpmM,
+          },
+          ...prev,
+        ];
+        return next.slice(0, 5); // Keep last 5 runs
+      });
+    };
+
+    processTiles();
+    return () => { isMounted = false; };
+  }, [runResult]);
 
   // Keyword prompt → class auto-update
   const promptResolved = resolvePromptToClass(prompt);
@@ -218,14 +251,14 @@ export default function GenerativeLab({
     timerRef.current = setInterval(() => setElapsed(p => p + 1), 1000);
 
     const result = await generateStudio({
-      cls_name: cls.name,
-      prompt,
-      steps,
-      cfg,
-      seed,
-      enhance,
-      models: ['vae', 'wgan', 'ddpm'],
-      hfToken: hfToken.trim() || null,
+      cls_name:   cls.name,
+      prompt:     prompt,
+      steps:      Number(steps),
+      cfg:        Number(cfg),
+      seed:       Number(seed),
+      enhance:    Boolean(enhance),
+      models:     ['vae', 'wgan', 'ddpm'],
+      hfToken:    hfToken.trim() || null,
     });
 
     clearInterval(timerRef.current);
@@ -269,114 +302,96 @@ export default function GenerativeLab({
           </div>
         </div>
 
-        {/* ── DDPM prompt note ── */}
-        <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs font-mono text-slate-300 space-y-1 shadow-md">
-          <span className="text-cyan-400 font-bold">Class Conditioning Note: </span>
-          The DDPM is conditioned on the CIFAR-10 class label (10 classes); the prompt input performs keyword-to-class matching.
-          The keyword <span className="text-cyan-300 font-bold">"{prompt || 'e.g. golden retriever'}"</span>{' '}
-          {promptResolved !== null
-            ? <>matched class <span className="text-emerald-400 font-bold">{CIFAR10_CLASSES[promptResolved].label}</span>.</>
-            : 'did not match a class name; using the target class dropdown below.'}
-        </div>
+        {/* ── Controls panel ── */}
+        <div className="p-6 rounded-3xl glass-panel border border-slate-800 space-y-6">
 
-        {/* ── Controls card: Larger labels (>=14px), visible sliders with values ── */}
-        <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-6 shadow-xl">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <h3 className="text-lg font-bold text-white">Generation Parameters</h3>
-            <button
-              onClick={() => { setShowToken(v => !v); }}
-              className="flex items-center space-x-1.5 text-xs font-mono text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer"
-            >
-              <Key className="w-3.5 h-3.5" />
-              <span>{showToken ? 'Hide Token' : 'HF Token (optional for private quota)'}</span>
-            </button>
+          {/* Row 1: CIFAR-10 class chips */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-slate-200">
+                Class Conditioner (DDPM):
+              </label>
+              <span className="text-xs font-mono text-cyan-400 font-bold">
+                {cls.label} ({cls.name})
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {CIFAR10_CLASSES.map((c) => {
+                const isSelected = effectiveClassIdx === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => { setSelectedClassIdx(c.id); setPrompt(''); }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-cyan-500/20 border border-cyan-500/60 text-cyan-300 font-bold shadow-sm'
+                        : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {showToken && (
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs font-mono space-y-2">
-              <div className="flex justify-between text-slate-300">
-                <span>Hugging Face token (<code className="text-cyan-400">hf_...</code>):</span>
-                <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline flex items-center space-x-1">
-                  <span>Get Token</span><ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
+          {/* Row 2: Prompt + Seed */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2 space-y-1">
+              <label className="text-xs font-mono text-slate-400">
+                Natural-language prompt (auto-resolves to class):
+              </label>
               <input
-                type="password" value={hfToken} onChange={e => setHfToken(e.target.value)}
-                placeholder="hf_..." aria-label="HF Token"
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-cyan-300 text-xs font-mono focus:border-cyan-500 outline-none"
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Target Class */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-200 block">Target Class:</label>
-              <div className="relative">
-                <select
-                  value={effectiveClassIdx}
-                  onChange={e => { setSelectedClassIdx(Number(e.target.value)); setPrompt(''); }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-200 text-sm font-mono focus:border-cyan-500 outline-none appearance-none pr-8 cursor-pointer"
-                  aria-label="CIFAR-10 class"
-                >
-                  {CIFAR10_CLASSES.map(c => (
-                    <option key={c.id} value={c.id}>{c.label}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-slate-500 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Keyword Prompt */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-200 block">Keyword Matcher:</label>
-              <input
-                type="text" value={prompt} onChange={e => setPrompt(e.target.value)}
-                placeholder="e.g. airplane, cat, frog"
-                aria-label="Prompt"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-200 text-sm font-mono focus:border-cyan-500 outline-none"
+                type="text"
+                value={prompt}
+                onChange={e => setPrompt(e.target.value)}
+                placeholder="e.g. 'a cute dog playing outside', 'airplane in the sky'…"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-600 text-xs font-mono focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all"
               />
             </div>
 
-            {/* Seed */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-200 block">Random Seed:</label>
+            <div className="space-y-1">
+              <label className="text-xs font-mono text-slate-400">Seed:</label>
               <div className="flex space-x-2">
                 <input
-                  type="number" value={seed} onChange={e => setSeed(Number(e.target.value))}
-                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-200 text-sm font-mono focus:border-cyan-500 outline-none"
-                  aria-label="Random seed"
+                  type="number"
+                  value={seed}
+                  onChange={e => setSeed(Number(e.target.value))}
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs font-mono focus:border-cyan-500 outline-none"
                 />
                 <button
                   onClick={randomiseSeed}
-                  className="px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-300 hover:text-cyan-300 hover:border-cyan-500 transition-colors cursor-pointer"
-                  title="Randomise seed" aria-label="Randomise seed"
+                  className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  title="Randomise Seed"
                 >
                   <Shuffle className="w-4 h-4" />
                 </button>
               </div>
             </div>
+          </div>
 
-            {/* Steps (10-250) */}
+          {/* Row 3: Diffusion Sliders */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-800/80">
+            {/* Steps slider */}
             <div className="space-y-2">
               <div className="flex justify-between text-sm font-semibold text-slate-200">
                 <span>DDIM Steps:</span>
                 <span className="text-cyan-400 font-mono font-bold text-base">{steps}</span>
               </div>
               <input
-                type="range" min="10" max="250" step="5" value={steps}
+                type="range" min="10" max="100" step="5" value={steps}
                 onChange={e => setSteps(Number(e.target.value))}
                 className="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
                 aria-label="DDIM steps"
               />
               <div className="flex justify-between text-[11px] font-mono text-slate-500">
-                <span>10 (Fast)</span>
+                <span>10 (Fastest)</span>
                 <span>50 (Pareto Knee)</span>
-                <span>250 (Max)</span>
+                <span>100 (Max Fidelity)</span>
               </div>
             </div>
 
-            {/* CFG (0-5) */}
+            {/* CFG slider */}
             <div className="space-y-2">
               <div className="flex justify-between text-sm font-semibold text-slate-200">
                 <span>Guidance Scale (w):</span>
@@ -461,9 +476,23 @@ export default function GenerativeLab({
         {/* ── Three grid cards: 16 tiles each, square aspect ratio ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {['vae', 'wgan', 'ddpm'].map(k => (
-            <ModelGridCard key={k} modelKey={k} runData={runResult} isLoading={isLoading} />
+            <ModelGridCard
+              key={k}
+              modelKey={k}
+              runData={runResult}
+              isLoading={isLoading}
+              tiles={modelTiles[k]}
+            />
           ))}
         </div>
+
+        {/* ── Output Analysis Panel (Section C) ── */}
+        <OutputAnalysisPanel
+          runResult={runResult}
+          modelTiles={modelTiles}
+          computedMetrics={computedMetrics}
+          runHistory={runHistory}
+        />
 
         {/* Footnote */}
         <p className="text-[11px] text-slate-500 font-mono text-center max-w-2xl mx-auto">
