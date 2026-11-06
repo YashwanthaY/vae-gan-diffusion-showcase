@@ -80,7 +80,7 @@ function ChartCard({ title, caption, chartRef, children }) {
 }
 
 // ── (a) FID vs DDIM steps ────────────────────────────────────────────────────
-function FidVsSteps({ sweeps }) {
+export function FidVsSteps({ sweeps }) {
   const ref = useRef(null);
   const pts = sweeps?.steps;
   if (!pts) return <PendingBox message="pending: run Kaggle stage 'steps'" />;
@@ -103,7 +103,7 @@ function FidVsSteps({ sweeps }) {
 }
 
 // ── (b) FID / Precision / Recall vs guidance ─────────────────────────────────
-function MetricsVsGuidance({ sweeps }) {
+export function MetricsVsGuidance({ sweeps }) {
   const ref = useRef(null);
   const pts = sweeps?.guidance;
   if (!pts) return <PendingBox message="pending: run Kaggle stage 'guid'" />;
@@ -130,7 +130,7 @@ function MetricsVsGuidance({ sweeps }) {
 }
 
 // ── (c) Quality-vs-cost Pareto ───────────────────────────────────────────────
-function ParetoChart({ sweeps, speed, prdc, lastRun }) {
+export function ParetoChart({ sweeps, speed, prdc, lastRun }) {
   const ref = useRef(null);
   const pts = sweeps?.steps;
   const ddpm100ms = speed?.ddpm100_ms_per_img;
@@ -159,7 +159,7 @@ function ParetoChart({ sweeps, speed, prdc, lastRun }) {
 }
 
 // ── (d) Precision-vs-Recall scatter with annotations ─────────────────────────
-function PrecRecallScatter({ prdc }) {
+export function PrecRecallScatter({ prdc }) {
   const ref = useRef(null);
   if (!prdc?.vae?.precision?.mean) return <PendingBox message="pending: run Kaggle 'grids' pipeline" />;
 
@@ -181,18 +181,13 @@ function PrecRecallScatter({ prdc }) {
 
   return (
     <ChartCard title="Precision vs Recall" caption="Error bars represent ±std across evaluation seeds. WGAN-GP recall ≈ 0.00 indicates mode collapse." chartRef={ref}>
-      <div className="relative h-full">
-        <Suspense fallback={null}><LazyScatter ref={ref} data={{ datasets }} options={opts} /></Suspense>
-        <div className="absolute bottom-2 left-6 px-2 py-0.5 rounded bg-amber-950/80 border border-amber-500/60 text-[10px] font-mono text-amber-300 pointer-events-none">
-          ⚠ WGAN-GP recall = 0: mode collapse
-        </div>
-      </div>
+      <Suspense fallback={null}><LazyScatter ref={ref} data={{ datasets }} options={opts} /></Suspense>
     </ChartCard>
   );
 }
 
 // ── (e) Per-seed FID strip plot ──────────────────────────────────────────────
-function PerSeedFid({ prdc }) {
+export function PerSeedFid({ prdc }) {
   const ref = useRef(null);
   const ddpmSeeds = prdc?.ddpm?.fid?.per_seed || (prdc?.ddpm?.fid?.mean ? [prdc.ddpm.fid.mean] : null);
   const vaeSeeds  = prdc?.vae?.fid?.per_seed;
@@ -246,7 +241,7 @@ function PerSeedFid({ prdc }) {
         },
         title: { display: true, text: 'Evaluation Random Seed', color: '#64748b' },
       },
-      y: { ...BASE_OPTS.scales.y, min: 0, max: 270, title: { display: true, text: 'FID ↓', color: '#64748b' } },
+      y: { ...BASE_OPTS.scales.y, title: { display: true, text: 'FID ↓', color: '#64748b' } },
     },
   };
 
@@ -262,7 +257,7 @@ function PerSeedFid({ prdc }) {
 }
 
 // ── (f) Downstream bar chart ──────────────────────────────────────────────────
-function DownstreamChart() {
+export function DownstreamChart() {
   const ref = useRef(null);
   const { data: jsonData } = useJsonData('/results/downstream_v2.json');
   const results = jsonData?.results ?? DOWNSTREAM_FINAL.metrics;
@@ -304,15 +299,6 @@ function DownstreamChart() {
     </ChartCard>
   );
 }
-
-export {
-  FidVsSteps,
-  MetricsVsGuidance,
-  ParetoChart,
-  PrecRecallScatter,
-  PerSeedFid,
-  DownstreamChart,
-};
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 export default function OutputsTab2Plots({ lastRun, studioSliders }) {

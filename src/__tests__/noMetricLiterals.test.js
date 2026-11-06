@@ -36,3 +36,4 @@ describe('No Metric Literals in Components Rule', () => {
     expect(violations, `Found hardcoded metric literals in components:\n${violations.join('\n')}`).toEqual([]);
   });
 });
+

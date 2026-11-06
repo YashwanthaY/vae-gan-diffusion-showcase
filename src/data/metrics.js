@@ -146,3 +146,4 @@ export const HEADLINE_NUMBERS = [
 
 export const BENCHMARK_FOOTNOTE =
   'Protocol: 1 trained checkpoint per model; 5 evaluation seeds for β-VAE and WGAN-GP; 1 seed for DDPM (100 steps, w=1.5); N = 5,000 images per model per seed. Reference: fixed 10,000-image CIFAR-10 train subset. Hardware: NVIDIA Tesla T4. FID is not comparable with published 50,000-sample values.';
+
