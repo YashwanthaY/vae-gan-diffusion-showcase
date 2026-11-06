@@ -1,11 +1,87 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, ChevronRight, ExternalLink, Sparkles, AlertTriangle } from 'lucide-react';
+import {
+  Sparkles, ArrowRight, Play, ExternalLink, HelpCircle,
+  BarChart2, Zap, Database, CheckCircle2, ChevronRight, Layers, Sliders
+} from 'lucide-react';
 import ThreeCanvas from './ThreeCanvas';
-import { RESEARCH_PROJECT, MODELS_DATA, MODEL_METRICS, DOWNSTREAM_FINAL, FID_DISCLAIMER } from '../data/researchData';
+import ExaminerTourModal from './ExaminerTourModal';
 
-export default function HeroSection({ activeModel, setActiveModel }) {
-  const currentModelData = MODELS_DATA.find((m) => m.id === activeModel) || MODELS_DATA[2];
+const HEADLINE_CARDS = [
+  {
+    category: 'QUALITY',
+    metric: '11.2',
+    label: 'DDPM FID',
+    comparison: 'vs 112.4 (β-VAE) · 242.5 (WGAN-GP)',
+    soWhat: 'Diffusion is ~10× closer to real CIFAR-10 data distribution.',
+    target: 'findings',
+    accentColor: 'text-cyan-400',
+    borderColor: 'border-cyan-500/40 hover:border-cyan-400',
+    bgGlow: 'bg-cyan-950/20',
+  },
+  {
+    category: 'DIVERSITY',
+    metric: '0.67',
+    label: 'Recall',
+    comparison: 'vs 0.10 (β-VAE) · 0.00 (WGAN-GP)',
+    soWhat: 'WGAN-GP suffered complete mode collapse; FID alone hid the failure.',
+    target: 'debugging',
+    accentColor: 'text-rose-400',
+    borderColor: 'border-rose-500/40 hover:border-rose-400',
+    bgGlow: 'bg-rose-950/20',
+  },
+  {
+    category: 'COST',
+    metric: '524ms',
+    label: 'Latency / Img',
+    comparison: 'vs 0.41ms (β-VAE) · 0.80ms (WGAN-GP)',
+    soWhat: 'Quality is bought with compute: DDPM demands ~1,000× more inference budget.',
+    target: 'findings',
+    accentColor: 'text-amber-400',
+    borderColor: 'border-amber-500/40 hover:border-amber-400',
+    bgGlow: 'bg-amber-950/20',
+  },
+  {
+    category: 'UTILITY',
+    metric: '+4.38%',
+    label: 'ResNet-18 Gain',
+    comparison: 'p = 0.030 (low-data) · +0.54% p = 0.13 (full)',
+    soWhat: 'Synthetic images helped in data scarcity, but offered no gain with full real data.',
+    target: 'downstream',
+    accentColor: 'text-emerald-400',
+    borderColor: 'border-emerald-500/40 hover:border-emerald-400',
+    bgGlow: 'bg-emerald-950/20',
+  },
+];
+
+const TOUR_STEPS = [
+  { id: 'step-q', label: '1. The Question', icon: HelpCircle, target: 'hero', desc: 'Why benchmark 3 generative families?' },
+  { id: 'step-m', label: '2. Research Design', icon: Sliders, target: 'design', desc: '5-metric protocol & parameter sweeps' },
+  { id: 'step-e', label: '3. Findings & Evidence', icon: BarChart2, target: 'findings', desc: 'Pareto curves, benchmarks, & charts' },
+  { id: 'step-t', label: '4. Try It Yourself', icon: Zap, target: 'live-api', desc: 'Generate live 4×4 grids via ZeroGPU' },
+];
+
+export default function HeroSection() {
+  const [activeStep, setActiveStep] = useState(0);
+  const [tourOpen, setTourOpen] = useState(false);
+
+  // Auto-play the 20-second "how to read this site" step indicator (5 seconds per step)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveStep((prev) => (prev + 1) % TOUR_STEPS.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Listen to ?present=1 URL parameter
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('present') === '1') {
+        setTourOpen(true);
+      }
+    }
+  }, []);
 
   const scrollTo = (id) => {
     const el = document.getElementById(id);
@@ -14,170 +90,142 @@ export default function HeroSection({ activeModel, setActiveModel }) {
 
   return (
     <section id="hero" className="relative min-h-screen pt-24 pb-16 flex flex-col justify-center overflow-hidden bg-cyber-grid">
-      
       {/* Glow aura backdrops */}
       <div className="absolute top-1/4 left-10 w-96 h-96 bg-cyan-500/10 rounded-full filter blur-[120px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-purple-500/10 rounded-full filter blur-[150px] pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
-        
-        {/* Left Column: Headline & Details */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="lg:col-span-7 space-y-6"
-        >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-12 relative z-10">
+
+        {/* Top Headline Block */}
+        <div className="text-center space-y-6 max-w-4xl mx-auto">
           {/* Research Pill Badge */}
-          <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-cyan-500/30 text-cyan-300 text-xs font-mono">
+          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-cyan-500/30 text-cyan-300 text-xs font-mono shadow-md">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-            <span>Generative AI Research & Downstream Domain-Gap Study (CIFAR-10)</span>
+            <span>Final-Year Comparative Parametric Research Study · CIFAR-10</span>
           </div>
 
           {/* Main Title */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1]">
-            Comparative Parametric Study of <br />
-            <span className="bg-gradient-to-r from-emerald-400 via-amber-400 to-cyan-400 bg-clip-text text-transparent">
-              β-VAE, WGAN-GP & DDPM
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.15]">
+            Which generative model should you trust to{' '}
+            <span className="bg-gradient-to-r from-cyan-400 via-emerald-400 to-purple-400 bg-clip-text text-transparent">
+              create training data?
             </span>
           </h1>
 
-          <p className="text-base sm:text-lg text-slate-300 max-w-2xl leading-relaxed">
-            A rigorous 5-seed comparative benchmark on CIFAR-10 image generation. Evaluating distribution fidelity (FID, IS, LPIPS, SSIM) alongside downstream classifier utility under standardized protocols.
+          {/* Subtitle */}
+          <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-3xl mx-auto">
+            We evaluated a <strong>β-VAE</strong>, a <strong>WGAN-GP</strong>, and a <strong>class-conditional DDPM</strong> on CIFAR-10 under one standardized evaluation harness: 5 formal metrics, hyperparameter sweeps, 5 random seeds, statistical hypothesis testing, and downstream ResNet-18 classifier utility.
           </p>
 
-          {/* Interactive Model Selector Cards */}
-          <div className="pt-2">
-            <p className="text-xs font-mono text-slate-400 uppercase tracking-wider mb-2">
-              Select Generative Architecture Viewport:
-            </p>
-            <div className="grid grid-cols-3 gap-3">
-              {MODELS_DATA.map((model) => (
-                <button
-                  key={model.id}
-                  onClick={() => setActiveModel(model.id)}
-                  className={`p-3 rounded-xl text-left border transition-all relative overflow-hidden ${
-                    activeModel === model.id
-                      ? 'bg-slate-900 border-cyan-500/60 shadow-lg shadow-cyan-500/10'
-                      : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 opacity-75 hover:opacity-100'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-heading font-bold text-sm text-white" style={{ color: model.color }}>
-                      {model.name}
-                    </span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
-                      FID {model.fid}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
-                    {model.badge}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Headline Results Banner */}
-          <div className="p-4 rounded-2xl glass-card-ddpm border border-cyan-500/30 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <div className="text-xs text-slate-400 font-mono">Headline Generative Model</div>
-              <div className="text-xl font-bold text-cyan-300 flex items-center space-x-2">
-                <span>DDPM FID = {MODEL_METRICS.ddpm.fid.formatted}</span>
-                <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-700/60">
-                  Best Quality
-                </span>
-              </div>
-            </div>
-            <div className="border-l border-slate-800 pl-4">
-              <div className="text-xs text-slate-400 font-mono">Downstream Classifier Utility</div>
-              <div className="text-sm font-semibold text-cyan-300">
-                500 real/class + 5k synth: {DOWNSTREAM_FINAL.metrics.real_500pc_plus_synth.mean}%
-              </div>
-              <div className="text-[11px] text-slate-400 font-mono">vs {DOWNSTREAM_FINAL.metrics.real_500pc_only.mean}% real-only baseline (+4.38% low-data benefit)</div>
-            </div>
-          </div>
-
-
-          {/* FID Disclaimer */}
-          <div className="text-[11px] font-mono text-slate-400 flex items-center space-x-1.5">
-            <AlertTriangle className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-            <span>{FID_DISCLAIMER}</span>
-          </div>
-
           {/* Action CTAs */}
-          <div className="flex flex-wrap items-center gap-4 pt-2">
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => setTourOpen(true)}
+              className="px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-extrabold text-xs sm:text-sm font-mono flex items-center space-x-2 shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
+            >
+              <Play className="w-4 h-4 fill-current" />
+              <span>Guided Tour (5-Min Examiner Mode)</span>
+            </button>
+
+            <button
+              onClick={() => scrollTo('findings')}
+              className="px-5 py-3 rounded-2xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 text-slate-200 hover:text-white font-mono text-xs sm:text-sm flex items-center space-x-2 transition-all cursor-pointer"
+            >
+              <BarChart2 className="w-4 h-4 text-cyan-400" />
+              <span>Explore Benchmark Findings</span>
+            </button>
+
             <button
               onClick={() => scrollTo('live-api')}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-extrabold text-sm shadow-lg shadow-cyan-500/25 transition-all flex items-center space-x-2"
+              className="px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 hover:border-purple-500/50 text-slate-300 hover:text-white font-mono text-xs sm:text-sm flex items-center space-x-2 transition-all cursor-pointer"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>Open Live Demo & Gallery</span>
+              <Zap className="w-4 h-4 text-purple-400" />
+              <span>Verify Live Lab</span>
             </button>
-            <button
-              onClick={() => scrollTo('models')}
-              className="px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-medium text-sm transition-all flex items-center space-x-2"
+          </div>
+        </div>
+
+        {/* 4 Headline Number Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {HEADLINE_CARDS.map((card) => (
+            <div
+              key={card.category}
+              onClick={() => scrollTo(card.target)}
+              className={`p-6 rounded-3xl glass-panel border ${card.borderColor} ${card.bgGlow} transition-all duration-300 cursor-pointer flex flex-col justify-between space-y-4 group shadow-xl hover:-translate-y-1`}
             >
-              <span>Explore Benchmark Metrics</span>
-              <ChevronRight className="w-4 h-4 text-cyan-400" />
-            </button>
-            <a
-              href={RESEARCH_PROJECT.huggingFaceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="p-3 rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-all"
-              title="Open Hugging Face Space"
-            >
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="font-bold text-slate-400 tracking-wider">{card.category}</span>
+                  <span className="flex items-center space-x-1 text-slate-500 group-hover:text-cyan-300 transition-colors">
+                    <span>see evidence</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </span>
+                </div>
 
-        </motion.div>
+                {/* Big 56-72px Numeral */}
+                <div className={`text-5xl sm:text-6xl font-extrabold tracking-tight font-mono ${card.accentColor}`}>
+                  {card.metric}
+                </div>
 
-        {/* Right Column: 3D Interactive WebGL Scene */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="lg:col-span-5 h-[480px] lg:h-[550px] relative rounded-3xl glass-panel border border-slate-800/80 p-2 overflow-hidden flex flex-col shadow-2xl"
-        >
-          {/* Canvas header overlay */}
-          <div className="absolute top-4 left-4 z-20 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800 flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: currentModelData.color }} />
-            <span className="text-xs font-mono font-bold text-white">
-              {currentModelData.name} 3D Latent Manifold
-            </span>
-          </div>
+                <div className="text-xs font-mono font-bold text-slate-200">
+                  {card.label} <span className="text-slate-400 font-normal">({card.comparison})</span>
+                </div>
+              </div>
 
-          <div className="absolute top-4 right-4 z-20 text-[10px] font-mono bg-slate-900/90 text-slate-400 px-2.5 py-1 rounded-lg border border-slate-800">
-            Interactive Three.js Viewport
-          </div>
-
-          {/* 3D Canvas */}
-          <div className="w-full h-full rounded-2xl overflow-hidden">
-            <ThreeCanvas activeModel={activeModel} />
-          </div>
-
-          {/* Canvas bottom specs footer */}
-          <div className="absolute bottom-4 left-4 right-4 z-20 bg-slate-950/85 backdrop-blur-md p-3 rounded-xl border border-slate-800 flex items-center justify-between text-xs font-mono">
-            <div>
-              <span className="text-slate-400">FID Score: </span>
-              <span className="font-bold text-white" style={{ color: currentModelData.color }}>
-                {currentModelData.fid}
-              </span>
+              <div className="pt-3 border-t border-slate-800/80">
+                <p className="text-xs text-slate-300 font-sans leading-relaxed">
+                  <strong className="text-white">So what: </strong>
+                  {card.soWhat}
+                </p>
+              </div>
             </div>
-            <div>
-              <span className="text-slate-400">Inception Score: </span>
-              <span className="font-bold text-white">{currentModelData.is}</span>
-            </div>
-            <div>
-              <span className="text-slate-400">Params: </span>
-              <span className="text-cyan-300 font-bold">{currentModelData.parameters}</span>
-            </div>
+          ))}
+        </div>
+
+        {/* 20-Second Auto-Playing "How to read this site" Strip */}
+        <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2 text-xs font-mono text-slate-400">
+            <span className="font-bold text-slate-300">How to Read This Research Site:</span>
+            <span>20-second walkthrough · Click any step to jump</span>
           </div>
-        </motion.div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {TOUR_STEPS.map((s, idx) => {
+              const { icon: StepIcon } = s;
+              const isCurrent = activeStep === idx;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => {
+                    setActiveStep(idx);
+                    scrollTo(s.target);
+                  }}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    isCurrent
+                      ? 'bg-slate-950 border-cyan-500 text-white shadow-md shadow-cyan-500/10'
+                      : 'bg-slate-900/60 border-slate-800/80 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <StepIcon className={`w-4 h-4 ${isCurrent ? 'text-cyan-400' : 'text-slate-500'}`} />
+                    <span className="text-xs font-mono font-bold">{s.label}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">{s.desc}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Non-negotiable footnote banner */}
+        <div className="text-center text-[11px] font-mono text-slate-500">
+          ⚐ Standardized evaluation protocol: N = 5,000 images per model vs fixed 10,000-image CIFAR-10 reference split. Free-tier Tesla T4 GPU.
+        </div>
 
       </div>
+
+      {/* Presentation Tour Modal */}
+      <ExaminerTourModal isOpen={tourOpen} onClose={() => setTourOpen(false)} />
     </section>
   );
 }

@@ -116,3 +116,62 @@ code, pre, .font-mono {
 .animate-pulse-slow {
   animation: pulse-glow 4s infinite ease-in-out;
 }
+
+/* Presentation / Light Theme */
+html.presentation-light {
+  background-color: #ffffff;
+  color: #0b1020;
+}
+html.presentation-light body {
+  background-color: #ffffff;
+  color: #0b1020;
+}
+html.presentation-light .bg-slate-950 {
+  background-color: #ffffff !important;
+  color: #0b1020 !important;
+}
+html.presentation-light .bg-slate-900 {
+  background-color: #f1f5f9 !important;
+  color: #0b1020 !important;
+}
+html.presentation-light .glass-panel {
+  background: rgba(248, 250, 252, 0.95) !important;
+  border-color: #cbd5e1 !important;
+  color: #0b1020 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+}
+html.presentation-light .text-white {
+  color: #0b1020 !important;
+}
+html.presentation-light .text-slate-200,
+html.presentation-light .text-slate-300 {
+  color: #1e293b !important;
+}
+html.presentation-light .text-slate-400 {
+  color: #475569 !important;
+}
+html.presentation-light .border-slate-800,
+html.presentation-light .border-slate-900 {
+  border-color: #e2e8f0 !important;
+}
+
+/* @media print: 1-page executive research summary */
+@media print {
+  header, footer, nav, #live-api, #debugging, #roadmap, button {
+    display: none !important;
+  }
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+  }
+  #hero, #findings, #design {
+    display: block !important;
+    page-break-inside: avoid !important;
+  }
+  .glass-panel {
+    background: #ffffff !important;
+    border: 1px solid #cccccc !important;
+    box-shadow: none !important;
+  }
+}

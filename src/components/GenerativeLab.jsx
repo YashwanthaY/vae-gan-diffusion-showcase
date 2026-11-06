@@ -1,14 +1,12 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, RefreshCw, Zap, Key, X, Download, ExternalLink,
-  AlertTriangle, CheckCircle2, Cpu, Cloud, Image as ImageIcon,
-  Shuffle, Maximize2, ChevronDown
+  Cpu, Cloud, Image as ImageIcon, Shuffle, Maximize2, ChevronDown, CheckCircle2
 } from 'lucide-react';
 import { GRID, DEFAULTS, CIFAR10_CLASSES, resolvePromptToClass } from '../config.js';
-import { generateStudio } from '../services/gradioClient.js';
+import { generateStudio, getCachedStudioResponse } from '../services/gradioClient.js';
 import { MODEL_METRICS, FID_DISCLAIMER } from '../data/researchData.js';
-import OutputsPanel from './OutputsPanel.jsx';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -16,8 +14,15 @@ const MODE_BADGE = {
   gpu:    { label: 'GPU',    cls: 'bg-emerald-950 border-emerald-500/60 text-emerald-300', Icon: Zap },
   cpu:    { label: 'CPU',    cls: 'bg-amber-950  border-amber-500/60  text-amber-300',   Icon: Cpu },
   cached: { label: 'CACHED', cls: 'bg-slate-900  border-slate-600     text-slate-300',   Icon: Cloud },
-  error:  { label: 'ERROR',  cls: 'bg-red-950    border-red-600       text-red-300',     Icon: AlertTriangle },
 };
+
+export function formatImageSrc(val) {
+  if (!val) return '';
+  if (val.startsWith('data:') || val.startsWith('/') || val.startsWith('http')) {
+    return val;
+  }
+  return `data:image/png;base64,${val}`;
+}
 
 function ModeBadge({ mode }) {
   const cfg = MODE_BADGE[mode] ?? MODE_BADGE.cached;
@@ -40,10 +45,9 @@ function SkeletonGrid() {
   );
 }
 
-// DataURL → downloads a PNG
-function downloadPng(b64, filename) {
+function downloadImage(src, filename) {
   const a = document.createElement('a');
-  a.href = `data:image/png;base64,${b64}`;
+  a.href = formatImageSrc(src);
   a.download = filename;
   a.click();
 }
@@ -54,25 +58,25 @@ function Lightbox({ src, label, onClose }) {
     <AnimatePresence>
       <motion.div
         key="lb"
-        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 backdrop-blur-md p-4"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
       >
         <motion.div
-          className="relative max-w-lg w-full mx-4"
+          className="relative max-w-lg w-full"
           initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button onClick={onClose} className="absolute -top-3 -right-3 p-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 hover:text-white z-10">
+          <button onClick={onClose} className="absolute -top-3 -right-3 p-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 hover:text-white z-10 cursor-pointer">
             <X className="w-4 h-4" />
           </button>
           <img
-            src={`data:image/png;base64,${src}`}
+            src={formatImageSrc(src)}
             alt={label}
-            className="w-full rounded-xl border border-slate-700 shadow-2xl"
+            className="w-full rounded-2xl border border-slate-700 shadow-2xl"
             style={{ imageRendering: 'pixelated' }}
           />
-          <div className="text-center mt-2 text-xs font-mono text-slate-400">{label}</div>
+          <div className="text-center mt-3 text-xs font-mono text-slate-300">{label}</div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
@@ -92,7 +96,7 @@ function ModelGridCard({ modelKey, runData, isLoading }) {
   const data = runData?.per_model?.[modelKey];
 
   return (
-    <div className={`p-4 rounded-2xl ${cfg.tag} border ${cfg.border} flex flex-col space-y-3`}>
+    <div className={`p-5 rounded-3xl ${cfg.tag} border ${cfg.border} flex flex-col space-y-3.5 shadow-xl`}>
       {/* Header */}
       <div className="flex items-center justify-between text-xs font-mono">
         <span className={`font-bold text-${cfg.color}-300`}>{cfg.label}</span>
@@ -107,24 +111,24 @@ function ModelGridCard({ modelKey, runData, isLoading }) {
       ) : data?.grid_png_b64 ? (
         <>
           <div
-            className="aspect-square rounded-xl overflow-hidden border border-slate-700 bg-slate-950 cursor-zoom-in relative group"
+            className="aspect-square rounded-2xl overflow-hidden border border-slate-700/80 bg-slate-950 cursor-zoom-in relative group"
             onClick={() => setLightbox(true)}
           >
             <img
-              src={`data:image/png;base64,${data.grid_png_b64}`}
+              src={formatImageSrc(data.grid_png_b64)}
               alt={`${cfg.label} 4×4 grid`}
-              className="w-full h-full"
+              className="w-full h-full object-contain"
               style={{ imageRendering: 'pixelated' }}
             />
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
               <Maximize2 className="w-6 h-6 text-white" />
             </div>
           </div>
           <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-            <span>{GRID.n} images · {data.seconds?.toFixed(1) ?? '?'}s · NFE {runData.nfe ?? '?'}</span>
+            <span>{GRID.n} images · {data.seconds?.toFixed(3) ?? '?'}s · passes {modelKey === 'ddpm' ? (runData.cfg > 0 ? runData.steps * 2 : runData.steps) : 1}</span>
             <button
-              onClick={() => downloadPng(data.grid_png_b64, `${modelKey}_grid_seed${runData.seed}.png`)}
-              className={`flex items-center space-x-1 text-${cfg.color}-400 hover:text-${cfg.color}-200 transition-colors`}
+              onClick={() => downloadImage(data.grid_png_b64, `${modelKey}_grid_seed${runData.seed}.png`)}
+              className={`flex items-center space-x-1 text-${cfg.color}-400 hover:text-${cfg.color}-200 transition-colors cursor-pointer`}
             >
               <Download className="w-3.5 h-3.5" />
               <span>PNG</span>
@@ -132,10 +136,10 @@ function ModelGridCard({ modelKey, runData, isLoading }) {
           </div>
         </>
       ) : (
-        <div className="aspect-square rounded-xl bg-slate-900/50 border border-dashed border-slate-700 flex items-center justify-center">
+        <div className="aspect-square rounded-2xl bg-slate-900/50 border border-dashed border-slate-700 flex items-center justify-center">
           <div className="text-center space-y-1">
             <ImageIcon className="w-8 h-8 text-slate-600 mx-auto" />
-            <p className="text-xs text-slate-500 font-mono">pending</p>
+            <p className="text-xs text-slate-500 font-mono">Loading reference...</p>
           </div>
         </div>
       )}
@@ -152,37 +156,51 @@ function ModelGridCard({ modelKey, runData, isLoading }) {
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function GenerativeLab() {
+export default function GenerativeLab({
+  runResult: externalRunResult,
+  setRunResult: setExternalRunResult,
+  steps: externalSteps,
+  setSteps: setExternalSteps,
+  cfg: externalCfg,
+  setCfg: setExternalCfg,
+  seed: externalSeed,
+  setSeed: setExternalSeed,
+}) {
   // Studio controls
   const [selectedClassIdx, setSelectedClassIdx] = useState(5); // dog
   const [prompt, setPrompt]           = useState('');
-  const [steps, setSteps]             = useState(DEFAULTS.steps);
-  const [cfg, setCfg]                 = useState(DEFAULTS.cfg);
-  const [seed, setSeed]               = useState(42);
+  const [internalSteps, setInternalSteps] = useState(DEFAULTS.steps);
+  const [internalCfg, setInternalCfg]     = useState(DEFAULTS.cfg);
+  const [internalSeed, setInternalSeed]   = useState(42);
   const [enhance, setEnhance]         = useState(false);
   const [hfToken, setHfToken]         = useState('');
   const [showToken, setShowToken]     = useState(false);
-  const [outputTab, setOutputTab]     = useState(0);
+
+  const steps = externalSteps !== undefined ? externalSteps : internalSteps;
+  const setSteps = setExternalSteps || setInternalSteps;
+  const cfg = externalCfg !== undefined ? externalCfg : internalCfg;
+  const setCfg = setExternalCfg || setInternalCfg;
+  const seed = externalSeed !== undefined ? externalSeed : internalSeed;
+  const setSeed = setExternalSeed || setInternalSeed;
 
   // API state
   const [isLoading, setIsLoading]     = useState(false);
   const [elapsed, setElapsed]         = useState(0);
-  const [runResult, setRunResult]     = useState(null);
-  const timerRef                      = useRef(null);
+  const [internalRunResult, setInternalRunResult] = useState(null);
+  const runResult = externalRunResult !== undefined ? externalRunResult : internalRunResult;
+  const setRunResult = setExternalRunResult || setInternalRunResult;
+  const timerRef = useRef(null);
 
   const randomiseSeed = () => setSeed(Math.floor(Math.random() * 100000));
 
-  // Listen for apply-config events from Tab 4 (Best Model Configurations)
-  React.useEffect(() => {
-    const onApply = (e) => {
-      if (e.detail?.steps) setSteps(e.detail.steps);
-      if (e.detail?.cfg !== undefined) setCfg(e.detail.cfg);
-      const el = document.getElementById('live-api');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-    };
-    window.addEventListener('apply-config', onApply);
-    return () => window.removeEventListener('apply-config', onApply);
-  }, []);
+  // Automatically load initial reference samples on mount so the studio is never empty
+  useEffect(() => {
+    if (!runResult) {
+      getCachedStudioResponse({ cls_name: 'dog', seed: 42, steps: 50, cfg: 1.5 }).then((initialData) => {
+        setRunResult(initialData);
+      });
+    }
+  }, [runResult, setRunResult]);
 
   // Keyword prompt → class auto-update
   const promptResolved = resolvePromptToClass(prompt);
@@ -208,9 +226,9 @@ export default function GenerativeLab() {
     clearInterval(timerRef.current);
     setIsLoading(false);
     setRunResult(result);
-  }, [cls, prompt, steps, cfg, seed, enhance, hfToken]);
+  }, [cls, prompt, steps, cfg, seed, enhance, hfToken, setRunResult]);
 
-  const mode = runResult?.mode ?? null;
+  const mode = runResult?.mode ?? 'cached';
 
   return (
     <section id="live-api" className="py-24 relative bg-slate-950 border-t border-slate-900">
@@ -223,25 +241,25 @@ export default function GenerativeLab() {
 
         {/* ── Section header ── */}
         <div className="text-center space-y-4 max-w-3xl mx-auto">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-900 border border-cyan-500/40 text-cyan-300 text-xs font-mono">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-900 border border-cyan-500/40 text-cyan-300 text-xs font-mono shadow-md">
             <Zap className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Generative Lab — Live Studio + Outputs</span>
+            <span>Interactive Verification · Live Lab</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-            Generate & Analyse in Real Time
+            Don't Trust the Table? Generate Samples Yourself.
           </h2>
-          <p className="text-slate-400 text-sm">
-            Run all three models side-by-side via Hugging Face ZeroGPU. Results feed directly into the Outputs panel below.
+          <p className="text-slate-400 text-sm leading-relaxed">
+            Run all three models side-by-side via Hugging Face ZeroGPU (or inspect verified offline reference samples).
           </p>
 
           <div className="flex flex-wrap gap-3 justify-center pt-1">
             <a
               href="https://huggingface.co/spaces/Yashwantha123/vae-gan-diffusion-demo"
               target="_blank" rel="noreferrer"
-              className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs font-mono shadow-lg shadow-cyan-500/20 transition-all"
+              className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs font-mono shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
             >
               <ExternalLink className="w-4 h-4" />
-              <span>Open HF Space Demo</span>
+              <span>Open HF Space Backend</span>
             </a>
             <span className="inline-flex items-center px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-slate-400">
               Evaluated setting: 100 steps, w = 1.5
@@ -250,32 +268,32 @@ export default function GenerativeLab() {
         </div>
 
         {/* ── DDPM prompt note ── */}
-        <div className="p-4 rounded-xl bg-slate-900/90 border border-cyan-800/40 text-xs font-mono text-slate-300 space-y-1">
+        <div className="p-4 rounded-2xl bg-slate-900/90 border border-cyan-800/40 text-xs font-mono text-slate-300 space-y-1 shadow-md">
           <span className="text-cyan-300 font-bold">ℹ Prompt note: </span>
           The DDPM is conditioned on the class label (10 classes); the prompt box only does keyword-to-class matching.
           The keyword <span className="text-cyan-400">"{prompt || 'e.g. fluffy dog'}"</span>{' '}
           {promptResolved !== null
             ? <>matched class <span className="text-emerald-300 font-bold">{CIFAR10_CLASSES[promptResolved].label}</span>.</>
-            : 'did not match a class — using the class selector below.'}
+            : 'did not match a class — using the target class selector below.'}
         </div>
 
         {/* ── Controls card ── */}
-        <div className="p-6 sm:p-8 rounded-3xl glass-panel border border-slate-800 space-y-6">
+        <div className="p-6 sm:p-8 rounded-3xl glass-panel border border-slate-800 space-y-6 shadow-2xl">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <h3 className="text-lg font-bold text-white">Live Studio Controls</h3>
+            <h3 className="text-lg font-bold text-white">Live Lab Generation Controls</h3>
             <button
               onClick={() => { setShowToken(v => !v); }}
-              className="flex items-center space-x-1.5 text-xs font-mono text-slate-400 hover:text-cyan-300 transition-colors"
+              className="flex items-center space-x-1.5 text-xs font-mono text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer"
             >
               <Key className="w-3.5 h-3.5" />
-              <span>{showToken ? 'Hide Token' : 'HF Token (optional)'}</span>
+              <span>{showToken ? 'Hide Token' : 'HF Token (optional for private quota)'}</span>
             </button>
           </div>
 
           {showToken && (
             <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-xs font-mono space-y-2">
               <div className="flex justify-between text-slate-300">
-                <span>Hugging Face token (<code className="text-cyan-400">hf_...</code>) — forwarded on every API call:</span>
+                <span>Hugging Face token (<code className="text-cyan-400">hf_...</code>):</span>
                 <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline flex items-center space-x-1">
                   <span>Get Token</span><ExternalLink className="w-3 h-3" />
                 </a>
@@ -291,12 +309,12 @@ export default function GenerativeLab() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Class select */}
             <div className="space-y-2">
-              <label className="text-xs font-mono text-slate-300">Target Class:</label>
+              <label className="text-xs font-mono text-slate-300 font-bold">Target Class:</label>
               <div className="relative">
                 <select
                   value={effectiveClassIdx}
                   onChange={e => { setSelectedClassIdx(Number(e.target.value)); setPrompt(''); }}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 text-xs font-mono focus:border-cyan-500 outline-none appearance-none pr-8"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 text-xs font-mono focus:border-cyan-500 outline-none appearance-none pr-8 cursor-pointer"
                   aria-label="CIFAR-10 class"
                 >
                   {CIFAR10_CLASSES.map(c => (
@@ -309,10 +327,10 @@ export default function GenerativeLab() {
 
             {/* Prompt */}
             <div className="space-y-2">
-              <label className="text-xs font-mono text-slate-300">Keyword Prompt (class matcher):</label>
+              <label className="text-xs font-mono text-slate-300 font-bold">Keyword Prompt (class matcher):</label>
               <input
                 type="text" value={prompt} onChange={e => setPrompt(e.target.value)}
-                placeholder="e.g. fluffy golden retriever"
+                placeholder="e.g. cute puppy or white cat"
                 aria-label="Prompt"
                 className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 text-xs font-mono focus:border-cyan-500 outline-none"
               />
@@ -320,7 +338,7 @@ export default function GenerativeLab() {
 
             {/* Seed */}
             <div className="space-y-2">
-              <label className="text-xs font-mono text-slate-300">Seed:</label>
+              <label className="text-xs font-mono text-slate-300 font-bold">Evaluation Seed:</label>
               <div className="flex space-x-2">
                 <input
                   type="number" value={seed} onChange={e => setSeed(Number(e.target.value))}
@@ -329,7 +347,7 @@ export default function GenerativeLab() {
                 />
                 <button
                   onClick={randomiseSeed}
-                  className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-300 hover:border-cyan-500/50 transition-colors"
+                  className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-300 hover:border-cyan-500/50 transition-colors cursor-pointer"
                   title="Randomise seed" aria-label="Randomise seed"
                 >
                   <Shuffle className="w-4 h-4" />
@@ -340,7 +358,7 @@ export default function GenerativeLab() {
             {/* Steps */}
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-mono text-slate-300">
-                <span>DDIM Steps:</span>
+                <span className="font-bold">DDIM Steps:</span>
                 <span className="text-cyan-400 font-bold">{steps}</span>
               </div>
               <input
@@ -354,7 +372,7 @@ export default function GenerativeLab() {
             {/* CFG */}
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-mono text-slate-300">
-                <span>Guidance Scale (w):</span>
+                <span className="font-bold">Guidance Scale (w):</span>
                 <span className="text-cyan-400 font-bold">{cfg.toFixed(1)}</span>
               </div>
               <input
@@ -376,7 +394,7 @@ export default function GenerativeLab() {
                 <span>
                   Super-Resolution (DDPM only)
                   <br />
-                  <span className="text-slate-500 text-[10px]">demo only, not in any metric</span>
+                  <span className="text-slate-500 text-[10px]">visual upscaling demo, not in metric</span>
                 </span>
               </label>
             </div>
@@ -387,7 +405,7 @@ export default function GenerativeLab() {
             onClick={handleGenerate}
             disabled={isLoading}
             id="generate-btn"
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 font-extrabold text-sm shadow-xl shadow-cyan-500/20 transition-all flex items-center justify-center space-x-2"
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 font-extrabold text-sm shadow-xl shadow-cyan-500/20 transition-all flex items-center justify-center space-x-2 cursor-pointer"
           >
             {isLoading ? (
               <>
@@ -412,16 +430,16 @@ export default function GenerativeLab() {
                 />
               </div>
               <p className="text-[11px] text-slate-500 font-mono text-right">
-                Timeout fallback at 60 s (auto-switches to CACHED mode)
+                ZeroGPU dynamic lease active · Auto-fallback to CACHED reference at 60s
               </p>
             </div>
           )}
         </div>
 
         {/* ── Mode badge + status ── */}
-        {mode && (
+        {runResult && (
           <div className="flex items-center justify-between flex-wrap gap-2 text-xs font-mono text-slate-400">
-            <span>Last run: seed {runResult.seed} · {runResult.steps} steps · w = {runResult.cfg} · class = {runResult.class}</span>
+            <span>Active Sample: seed {runResult.seed} · {runResult.steps} steps · w = {runResult.cfg} · class = {runResult.class}</span>
             <ModeBadge mode={mode} />
           </div>
         )}
@@ -437,14 +455,6 @@ export default function GenerativeLab() {
         <p className="text-[11px] text-slate-500 font-mono text-center max-w-2xl mx-auto">
           ⚠ {FID_DISCLAIMER}
         </p>
-
-        {/* ── Outputs Panel ── */}
-        <OutputsPanel
-          lastRun={runResult}
-          studioSliders={{ steps, cfg, seed }}
-          activeTab={outputTab}
-          setActiveTab={setOutputTab}
-        />
 
       </div>
     </section>

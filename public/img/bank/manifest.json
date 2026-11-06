@@ -1,0 +1,12 @@
+{
+  "generated": "2026-10-11 17:16 UTC",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "ddim_steps": 100,
+  "cfg": 1.5,
+  "ddpm_groups": 32,
+  "images_per_grid": 8
+}

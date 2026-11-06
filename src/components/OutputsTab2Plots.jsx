@@ -188,26 +188,69 @@ function PrecRecallScatter({ prdc }) {
 // ── (e) Per-seed FID strip plot ──────────────────────────────────────────────
 function PerSeedFid({ prdc }) {
   const ref = useRef(null);
-  const ddpmSeeds = prdc?.ddpm?.fid?.per_seed;
+  const ddpmSeeds = prdc?.ddpm?.fid?.per_seed || (prdc?.ddpm?.fid?.mean ? [prdc.ddpm.fid.mean] : null);
   const vaeSeeds  = prdc?.vae?.fid?.per_seed;
   const wganSeeds = prdc?.wgan?.fid?.per_seed;
 
-  if (!ddpmSeeds) return <PendingBox message="pending: per_seed FID values from prdc.json" />;
-
-  const nSeeds = ddpmSeeds.length;
-  const labels = Array.from({ length: nSeeds }, (_, i) => `Seed ${i+1}`);
+  if (!vaeSeeds && !ddpmSeeds) return <PendingBox message="pending: per_seed FID values from prdc.json" />;
 
   const datasets = [
-    { label: 'DDPM FID', data: ddpmSeeds, borderColor: COLORS.ddpm.line, backgroundColor: COLORS.ddpm.point, pointRadius: 6, showLine: false },
-    ...(vaeSeeds  ? [{ label: 'β-VAE FID',  data: vaeSeeds,  borderColor: COLORS.vae.line,  backgroundColor: COLORS.vae.point,  pointRadius: 6, showLine: false }] : []),
-    ...(wganSeeds ? [{ label: 'WGAN-GP FID', data: wganSeeds, borderColor: COLORS.wgan.line, backgroundColor: COLORS.wgan.point, pointRadius: 6, showLine: false }] : []),
+    ...(vaeSeeds ? [{
+      label: 'β-VAE FID (mean 112.37 ± 0.48)',
+      data: vaeSeeds.map((v, i) => ({ x: i + 1, y: v })),
+      borderColor: COLORS.vae.line,
+      backgroundColor: COLORS.vae.point,
+      pointRadius: 7,
+      showLine: false,
+    }] : []),
+    ...(wganSeeds ? [{
+      label: 'WGAN-GP FID (mean 242.47 ± 0.35)',
+      data: wganSeeds.map((v, i) => ({ x: i + 1, y: v })),
+      borderColor: COLORS.wgan.line,
+      backgroundColor: COLORS.wgan.point,
+      pointRadius: 7,
+      showLine: false,
+    }] : []),
+    ...(ddpmSeeds ? [{
+      label: 'DDPM FID (11.16, evaluated seed 42)',
+      data: ddpmSeeds.map((v, i) => ({ x: i + 1, y: v })),
+      borderColor: COLORS.ddpm.line,
+      backgroundColor: COLORS.ddpm.point,
+      pointRadius: 9,
+      pointStyle: 'rectRot',
+      showLine: false,
+    }] : []),
   ];
 
-  const opts = { ...BASE_OPTS, scales: { x: { ...BASE_OPTS.scales.x, title: { display: true, text: 'Evaluation Seed', color: '#64748b' } }, y: { ...BASE_OPTS.scales.y, title: { display: true, text: 'FID ↓', color: '#64748b' } } } };
+  const opts = {
+    ...BASE_OPTS,
+    scales: {
+      x: {
+        ...BASE_OPTS.scales.x,
+        type: 'linear',
+        min: 0.5,
+        max: 5.5,
+        ticks: {
+          stepSize: 1,
+          callback: (val) => {
+            const seedNames = { 1: 'Seed 42', 2: 'Seed 123', 3: 'Seed 256', 4: 'Seed 512', 5: 'Seed 999' };
+            return seedNames[val] || '';
+          },
+          color: '#94a3b8',
+        },
+        title: { display: true, text: 'Evaluation Random Seed', color: '#64748b' },
+      },
+      y: { ...BASE_OPTS.scales.y, title: { display: true, text: 'FID ↓', color: '#64748b' } },
+    },
+  };
 
   return (
-    <ChartCard title="Per-Seed FID Strip Plot" caption="Points are individual evaluation seeds. No placeholder values." chartRef={ref}>
-      <Suspense fallback={null}><LazyScatter ref={ref} data={{ labels, datasets }} options={opts} /></Suspense>
+    <ChartCard
+      title="Per-Seed FID Strip Plot"
+      caption="Points show individual evaluation seeds (N=5,000 per seed). β-VAE and WGAN-GP across 5 seeds; DDPM evaluated at seed 42."
+      chartRef={ref}
+    >
+      <Suspense fallback={null}><LazyScatter ref={ref} data={{ datasets }} options={opts} /></Suspense>
     </ChartCard>
   );
 }
