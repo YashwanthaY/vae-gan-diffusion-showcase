@@ -996,3 +996,4 @@ export default function Benchmark4View({ onNavigateEvidence }) {
     </div>
   );
 }
+

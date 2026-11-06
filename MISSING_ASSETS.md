@@ -37,3 +37,4 @@ All grids are strictly **$4 \times 4$ (4 rows $\times$ 4 columns = 16 discrete $
 ## 2. Downstream Classifier Checkpoint Note (C2.4)
 - **Status:** Standalone ResNet-18 `.pth` weight file is not hosted on browser runtime to prevent downloading 45MB+ model weights into client WebAssembly.
 - **Implementation:** Downstream evaluation metrics and accuracy distributions are backed directly by experimental outputs (`results/downstream_v2.json` and Kaggle multi-seed test runs: Real 500/cls = 76.76%, Synth-Augmented = 81.14%, gain = +4.38 pts, p = 0.030).
+

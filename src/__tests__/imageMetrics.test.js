@@ -69,3 +69,4 @@ describe('imageMetrics computer vision functions', () => {
     expect(stats.means[0]).toBeCloseTo(125 / 255, 2);
   });
 });
+

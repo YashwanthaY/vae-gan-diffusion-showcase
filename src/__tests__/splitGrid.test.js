@@ -40,3 +40,4 @@ describe('splitGrid layout detection fixtures', () => {
     expect(layout).toEqual({ rows: 1, cols: 16, count: 16 });
   });
 });
+
