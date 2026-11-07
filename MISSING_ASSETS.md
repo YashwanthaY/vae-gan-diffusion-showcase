@@ -37,4 +37,17 @@ All grids are strictly **$4 \times 4$ (4 rows $\times$ 4 columns = 16 discrete $
 ## 2. Downstream Classifier Checkpoint Note (C2.4)
 - **Status:** Standalone ResNet-18 `.pth` weight file is not hosted on browser runtime to prevent downloading 45MB+ model weights into client WebAssembly.
 - **Implementation:** Downstream evaluation metrics and accuracy distributions are backed directly by experimental outputs (`results/downstream_v2.json` and Kaggle multi-seed test runs: Real 500/cls = 76.76%, Synth-Augmented = 81.14%, gain = +4.38 pts, p = 0.030).
+- **Classifier Agreement:** Browser-side ResNet-18 live evaluation is skipped; documented here as pending external Kaggle batch log.
+
+## 3. CIFAR-10 Reference Statistics (`public/data/json/reference_stats.json`)
+- **Status:** Currently missing (pending generation from `kaggle_reference_stats.py`).
+- **Required Fields:**
+  - `n_reference`: Integer (e.g. 1000 or 10000)
+  - `channel_mean`: Float array of length 3 `[0.4914, 0.4822, 0.4465]`
+  - `channel_std`: Float array of length 3 `[0.2470, 0.2435, 0.2616]`
+  - `pca`: Object `{ mean: float[3072], components: float[2][3072], explained_variance_ratio: float[2], reference_points: float[1000][2] }`
+  - `radial_spectrum_real`: Float array of length 16 (radial power spectrum of real CIFAR-10 images)
+  - `note`: Source explanation string
+- **Graceful Client Fallback:** When this file is absent, the Graphs View automatically renders all non-reference diagnostics (per-image quality strips, summary table, pairwise pixel diversity, sharpness, colourfulness, generated RGB histograms) and presents an informative "reference_stats.json missing" placeholder card for PCA scatter, FFT power spectrum, and Wasserstein distribution distance without crashing or displaying empty charts.
+
 

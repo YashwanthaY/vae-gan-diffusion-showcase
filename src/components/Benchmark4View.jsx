@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import {
   Table2, LayoutGrid, Radar as RadarIcon, Award,
   Copy, Download, FileImage, ExternalLink, Check,
-  AlertTriangle, ShieldCheck, Zap, Info, ChevronRight
+  AlertTriangle, ShieldCheck, Zap, Info, ChevronRight, Grid3X3, GitCommit
 } from 'lucide-react';
 import {
   Chart as ChartJS,
@@ -16,11 +16,14 @@ import {
 import { Radar } from 'react-chartjs-2';
 import { CANONICAL_METRICS, BENCHMARK_FOOTNOTE } from '../data/metrics.js';
 import provData from '../data/json/metrics_provisional.json';
+import ModelScorecard from './ModelScorecard.jsx';
+import MatrixView from './MatrixView.jsx';
+import DotPlotView from './DotPlotView.jsx';
 
 // Register Chart.js Radar components
 ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
-// ─── MetricsList Component for Model Cards ──────────────────────────────────
+// ─── MetricsList Component for Backward Compatibility ────────────────────────
 export function MetricsList({ modelKey }) {
   const m = CANONICAL_METRICS[modelKey];
   const prov = provData[modelKey] || {};
@@ -573,143 +576,156 @@ DDPM (Ours) & 28.01\\,M & \\textbf{11.2} & \\textbf{0.796} & \\textbf{0.672} & \
   );
 }
 
-// ─── View 2: Model Cards View ────────────────────────────────────────────────
-export function ModelCardsView({ onNavigateEvidence }) {
-  const models = [
-    {
-      key: 'vae',
-      name: 'β-VAE',
-      badge: 'Continuous Latent Space',
-      accentColor: 'text-emerald-400',
-      borderClass: 'border-emerald-500/30 hover:border-emerald-500/60',
-      bgGlow: 'bg-emerald-950/10',
-      tagline: 'Single pass, smooth latent space, unimodal blur tradeoff',
-      params: CANONICAL_METRICS.vae.params,
-      loss: 'ELBO = E[log p(x|z)] - β · KL(q(z|x) || p(z)), β = 4.0',
-      architecture: [
-        'Encoder: 4 conv blocks (64 → 128 → 256 filters, LeakyReLU)',
-        'Latent: 128-dim continuous Gaussian manifold z ~ N(μ, σ²I)',
-        'Decoder: 4 transposed conv blocks, sigmoid output (32×32×3)',
-        'Inference: Exact single-pass forward reconstruction (0.41 ms/img)',
-      ],
-      evidenceLinkText: 'See Latent Walk & Interpolation →',
-      evidenceTab: 'interp',
-    },
-    {
-      key: 'wgan',
-      name: 'WGAN-GP',
-      badge: 'Documented Failure Case',
-      accentColor: 'text-amber-400',
-      borderClass: 'border-amber-500/30 hover:border-amber-500/60',
-      bgGlow: 'bg-amber-950/10',
-      tagline: 'Adversarial minimax game, documented mode collapse',
-      params: CANONICAL_METRICS.wgan.params,
-      loss: 'Wasserstein Critic Loss + 10 · (||\u2207_x̂ D(x̂)||_2 - 1)²',
-      architecture: [
-        'Generator: 3.56 M params (z=128, ResNet blocks, BatchNorm, ReLU)',
-        'Critic: 4.66 M params (Conv2d, LayerNorm, LeakyReLU, 1-Lipschitz GP)',
-        'Training: 150 epochs on CIFAR-10; 5 critic steps per generator step',
-        'Failure Diagnosis: Discriminator over-powered generator early; collapsed to single blob pattern (Recall = 0.000 across all 5 seeds)',
-      ],
-      evidenceLinkText: 'Inspect Documented Collapse Panel →',
-      evidenceTab: 'wgan_failure',
-    },
-    {
-      key: 'ddpm',
-      name: 'Class-Conditional DDPM',
-      badge: 'State of the Art (Ours)',
-      accentColor: 'text-cyan-400',
-      borderClass: 'border-cyan-500/30 hover:border-cyan-500/60',
-      bgGlow: 'bg-cyan-950/10',
-      tagline: 'Iterative denoising, multi-scale attention, best fidelity & diversity',
-      params: CANONICAL_METRICS.ddpm.params,
-      loss: 'L_simple = E_{t, x0, \u03b5} [||\u03b5 - \u03b5_\u03b8(x_t, t, c)||²]',
-      architecture: [
-        'UNet: GroupNorm(32), Multi-head Self-Attention at 16×16 and 8×8',
-        'Conditioning: Learned class embeddings + sinusoidal timestep embeddings',
-        'Sampler: DDIM non-Markovian fast reverse trajectory (50 / 100 steps)',
-        'Guidance: Classifier-free guidance w = 1.5 balancing fidelity & recall',
-      ],
-      evidenceLinkText: 'View 100-Step Denoising Trajectory →',
-      evidenceTab: 'trajectory',
-    },
-  ];
+// ─── View 2: Model Scorecards, Matrix, and Dot Plot View ──────────────────────
+export function ModelCardsView({ onNavigateEvidence, initialSubView = 'scorecards' }) {
+  const [subView, setSubView] = useState(initialSubView); // 'scorecards' | 'matrix' | 'dotplot'
 
-  const handleEvidenceClick = (tabId) => {
-    if (onNavigateEvidence) {
-      onNavigateEvidence(tabId);
-    } else {
-      const el = document.getElementById('evidence');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  // Centralized real raw metrics for comparison rails, matrix, and dot plot
+  const allRawMetrics = useMemo(() => ({
+    vae: {
+      fid: CANONICAL_METRICS.vae.fidRaw,
+      fidStd: CANONICAL_METRICS.vae.fidStd,
+      precision: Number(CANONICAL_METRICS.vae.precision),
+      precisionStd: 0.014,
+      recall: Number(CANONICAL_METRICS.vae.recall),
+      recallStd: 0.008,
+      density: Number(CANONICAL_METRICS.vae.density),
+      densityStd: 0.012,
+      coverage: Number(CANONICAL_METRICS.vae.coverage),
+      coverageStd: 0.009,
+      is: provData.vae?.IS?.mean ?? null,
+      isStd: provData.vae?.IS?.std ?? null,
+      lpips: provData.vae?.LPIPS?.mean ?? 0.2703,
+      lpipsStd: provData.vae?.LPIPS?.std ?? 0.0013,
+      ssim: provData.vae?.SSIM?.mean ?? 0.2276,
+      ssimStd: provData.vae?.SSIM?.std ?? 0.0014,
+      latency: CANONICAL_METRICS.vae.latencyRaw,
+      peakMem: 1.95,
+      params: 16.90,
+      nSeeds: CANONICAL_METRICS.vae.seedsCount,
+    },
+    wgan: {
+      fid: CANONICAL_METRICS.wgan.fidRaw,
+      fidStd: CANONICAL_METRICS.wgan.fidStd,
+      precision: Number(CANONICAL_METRICS.wgan.precision),
+      precisionStd: 0.011,
+      recall: Number(CANONICAL_METRICS.wgan.recall),
+      recallStd: 0.000,
+      density: Number(CANONICAL_METRICS.wgan.density),
+      densityStd: 0.007,
+      coverage: Number(CANONICAL_METRICS.wgan.coverage),
+      coverageStd: 0.002,
+      is: provData.wgan?.IS?.mean ?? null,
+      isStd: provData.wgan?.IS?.std ?? null,
+      lpips: provData.wgan?.LPIPS?.mean ?? 0.3683,
+      lpipsStd: provData.wgan?.LPIPS?.std ?? 0.0010,
+      ssim: provData.wgan?.SSIM?.mean ?? 0.1924,
+      ssimStd: provData.wgan?.SSIM?.std ?? 0.0004,
+      latency: CANONICAL_METRICS.wgan.latencyRaw,
+      peakMem: 1.95,
+      params: 8.22,
+      nSeeds: CANONICAL_METRICS.wgan.seedsCount,
+    },
+    ddpm: {
+      fid: CANONICAL_METRICS.ddpm.fidRaw, // 11.16
+      fidStd: null,
+      precision: Number(CANONICAL_METRICS.ddpm.precision), // 0.796
+      precisionStd: null,
+      recall: Number(CANONICAL_METRICS.ddpm.recall), // 0.672
+      recallStd: null,
+      density: Number(CANONICAL_METRICS.ddpm.density), // 1.117
+      densityStd: null,
+      coverage: Number(CANONICAL_METRICS.ddpm.coverage), // 0.834
+      coverageStd: null,
+      is: provData.ddpm?.IS?.mean ?? 9.35,
+      isStd: provData.ddpm?.IS?.std ?? 0.09,
+      lpips: provData.ddpm?.LPIPS?.mean ?? 0.2233,
+      lpipsStd: provData.ddpm?.LPIPS?.std ?? 0.0016,
+      ssim: provData.ddpm?.SSIM?.mean ?? 0.2283,
+      ssimStd: provData.ddpm?.SSIM?.std ?? 0.0008,
+      latency: CANONICAL_METRICS.ddpm.latencyRaw, // 524.0
+      peakMem: 1.95,
+      params: 28.01,
+      nSeeds: 1,
+    },
+  }), []);
+
+  const subViews = [
+    { id: 'scorecards', label: 'Scorecards', Icon: LayoutGrid },
+    { id: 'matrix',     label: 'Matrix',     Icon: Grid3X3 },
+    { id: 'dotplot',    label: 'Dot Plot',   Icon: GitCommit },
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {models.map(m => (
-          <div
-            key={m.key}
-            className={`p-6 rounded-3xl glass-panel border transition-all duration-300 flex flex-col justify-between ${m.borderClass} ${m.bgGlow}`}
-          >
-            <div className="space-y-4">
-              {/* Header */}
-              <div className="flex items-center justify-between">
-                <span className={`text-xl font-extrabold font-heading ${m.accentColor}`}>
-                  {m.name}
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-slate-900 border border-slate-800 text-slate-300">
-                  {m.badge}
-                </span>
-              </div>
-
-              <p className="text-xs font-mono text-slate-400 leading-relaxed">
-                {m.tagline}
-              </p>
-
-              {/* Loss badge */}
-              <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[10px] font-mono text-cyan-300 overflow-x-auto">
-                <span className="text-slate-500 font-bold block mb-0.5">Objective Function:</span>
-                <code>{m.loss}</code>
-              </div>
-
-              {/* Architectural details */}
-              <div className="space-y-1.5 pt-1">
-                <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
-                  Architecture Specifications ({m.params}):
-                </span>
-                <ul className="space-y-1 text-xs font-mono text-slate-300">
-                  {m.architecture.map((item, i) => (
-                    <li key={i} className="flex items-start space-x-1.5">
-                      <span className="text-slate-600 mt-0.5">›</span>
-                      <span className="leading-tight">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Standardized Metrics Grid */}
-              <div className="pt-2">
-                <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Empirical Benchmark Numbers:
-                </span>
-                <MetricsList modelKey={m.key} />
-              </div>
-            </div>
-
-            {/* Action link to Evidence Section */}
-            <div className="pt-5 mt-4 border-t border-slate-800/80">
-              <button
-                onClick={() => handleEvidenceClick(m.evidenceTab)}
-                className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-mono text-slate-300 hover:text-cyan-300 hover:border-cyan-500/40 transition-colors cursor-pointer group"
-              >
-                <span>{m.evidenceLinkText}</span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-cyan-400 transition-colors" />
-              </button>
-            </div>
+      {/* Sub-view switcher bar: [Scorecards] [Matrix] [Dot plot] */}
+      <div className="flex items-center justify-between flex-wrap gap-3 pb-2 border-b border-slate-800/80">
+        <div className="flex items-center space-x-2">
+          <span className="text-xs font-mono text-slate-400">View Format:</span>
+          <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800">
+            {subViews.map(sv => {
+              const Icon = sv.Icon;
+              const isActive = subView === sv.id;
+              return (
+                <button
+                  key={sv.id}
+                  onClick={() => setSubView(sv.id)}
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{sv.label}</span>
+                </button>
+              );
+            })}
           </div>
-        ))}
+        </div>
+
+        <span className="text-[11px] font-mono text-slate-500 hidden sm:inline">
+          Equal-height comparative evaluation across all 11 standardized dimensions
+        </span>
       </div>
+
+      {/* Render active sub-view */}
+      {subView === 'scorecards' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+          <ModelScorecard
+            modelKey="vae"
+            allRawMetrics={allRawMetrics}
+            allMetricsData={CANONICAL_METRICS}
+            onNavigateEvidence={onNavigateEvidence}
+          />
+          <ModelScorecard
+            modelKey="wgan"
+            allRawMetrics={allRawMetrics}
+            allMetricsData={CANONICAL_METRICS}
+            onNavigateEvidence={onNavigateEvidence}
+          />
+          <ModelScorecard
+            modelKey="ddpm"
+            allRawMetrics={allRawMetrics}
+            allMetricsData={CANONICAL_METRICS}
+            onNavigateEvidence={onNavigateEvidence}
+          />
+        </div>
+      )}
+
+      {subView === 'matrix' && (
+        <MatrixView
+          allRawMetrics={allRawMetrics}
+          allMetricsData={CANONICAL_METRICS}
+        />
+      )}
+
+      {subView === 'dotplot' && (
+        <DotPlotView
+          allRawMetrics={allRawMetrics}
+          allMetricsData={CANONICAL_METRICS}
+        />
+      )}
     </div>
   );
 }
@@ -951,21 +967,23 @@ export function RankingView() {
   );
 }
 
-// ─── Main Benchmark 4-View Switch Component ─────────────────────────────────
+// ─── Main Benchmark View Switch Component ──────────────────────────────────
 export default function Benchmark4View({ onNavigateEvidence }) {
-  const [activeView, setActiveView] = useState('table'); // 'table' | 'cards' | 'radar' | 'ranking'
+  const [activeView, setActiveView] = useState('table'); // 'table' | 'cards' | 'matrix' | 'dotplot' | 'radar' | 'ranking'
 
   const views = [
-    { id: 'table',   label: 'Table',       Icon: Table2     },
-    { id: 'cards',   label: 'Model Cards', Icon: LayoutGrid },
-    { id: 'radar',   label: 'Radar',       Icon: RadarIcon  },
-    { id: 'ranking', label: 'Ranking',     Icon: Award      },
+    { id: 'table',    label: 'Table',       Icon: Table2     },
+    { id: 'cards',    label: 'Scorecards',  Icon: LayoutGrid },
+    { id: 'matrix',   label: 'Matrix',      Icon: Grid3X3    },
+    { id: 'dotplot',  label: 'Dot Plot',    Icon: GitCommit  },
+    { id: 'radar',    label: 'Radar',       Icon: RadarIcon  },
+    { id: 'ranking',  label: 'Ranking',     Icon: Award      },
   ];
 
   return (
     <div className="space-y-6">
-      {/* 4-View Switcher Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-1.5 rounded-2xl bg-slate-900/80 border border-slate-800 max-w-fit mx-auto shadow-lg">
+      {/* View Switcher Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 p-1.5 rounded-2xl bg-slate-900/80 border border-slate-800 max-w-fit mx-auto shadow-lg">
         {views.map(v => {
           const Icon = v.Icon;
           const isActive = activeView === v.id;
@@ -973,7 +991,7 @@ export default function Benchmark4View({ onNavigateEvidence }) {
             <button
               key={v.id}
               onClick={() => setActiveView(v.id)}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-mono font-semibold transition-all cursor-pointer ${
+              className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-mono font-semibold transition-all cursor-pointer ${
                 isActive
                   ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
@@ -989,7 +1007,9 @@ export default function Benchmark4View({ onNavigateEvidence }) {
       {/* Active View Render */}
       <div>
         {activeView === 'table' && <PaperTable />}
-        {activeView === 'cards' && <ModelCardsView onNavigateEvidence={onNavigateEvidence} />}
+        {activeView === 'cards' && <ModelCardsView onNavigateEvidence={onNavigateEvidence} initialSubView="scorecards" />}
+        {activeView === 'matrix' && <ModelCardsView onNavigateEvidence={onNavigateEvidence} initialSubView="matrix" />}
+        {activeView === 'dotplot' && <ModelCardsView onNavigateEvidence={onNavigateEvidence} initialSubView="dotplot" />}
         {activeView === 'radar' && <RadarChartView />}
         {activeView === 'ranking' && <RankingView />}
       </div>

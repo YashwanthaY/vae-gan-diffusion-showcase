@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, RefreshCw, Zap, Key, X, Download, ExternalLink,
-  Cpu, Cloud, Image as ImageIcon, Shuffle, Maximize2, ChevronDown
+  Cpu, Cloud, Image as ImageIcon, Shuffle, Maximize2, ChevronDown, BarChart2
 } from 'lucide-react';
 import { GRID, DEFAULTS, CIFAR10_CLASSES, resolvePromptToClass } from '../config.js';
 import { generateStudio, getCachedStudioResponse } from '../services/gradioClient.js';
@@ -11,6 +11,9 @@ import TileGrid from './TileGrid.jsx';
 import { assemble16Tiles } from '../utils/tileAssembler.js';
 import { computeAllTileMetrics } from '../utils/imageMetrics.js';
 import OutputAnalysisPanel from './OutputAnalysisPanel.jsx';
+import LiveLabGraphsView from './LiveLabGraphsView.jsx';
+import ViewModeSwitch from './ViewModeSwitch.jsx';
+import useViewMode from '../hooks/useViewMode.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -82,19 +85,30 @@ const MODEL_CFG = {
   ddpm: { label: 'DDPM',     color: 'cyan',    border: 'border-cyan-500/40',   tag: 'glass-card-ddpm', arch: '28.01 M UNet' },
 };
 
-function ModelGridCard({ modelKey, runData, isLoading, tiles = [] }) {
+function ModelGridCard({ modelKey, runData, isLoading, tiles = [], onFlipToGraphs }) {
   const [lightboxTile, setLightboxTile] = useState(null);
   const cfg = MODEL_CFG[modelKey];
   const data = runData?.per_model?.[modelKey];
 
   return (
     <div className={`p-5 rounded-3xl ${cfg.tag} border ${cfg.border} flex flex-col space-y-4 shadow-xl`}>
-      {/* Header: Architecture facts only, NO metrics */}
+      {/* Header: Architecture facts + See as graphs button */}
       <div className="flex items-center justify-between text-xs font-mono">
         <span className={`font-bold text-sm text-${cfg.color}-300`}>{cfg.label}</span>
-        <span className="px-2 py-0.5 rounded bg-slate-950/80 text-slate-400 border border-slate-800 text-[11px]">
-          {cfg.arch}
-        </span>
+        <div className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={onFlipToGraphs}
+            className="flex items-center space-x-1 px-2 py-0.5 rounded bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-cyan-300 text-[10px] transition-colors cursor-pointer"
+            title="See this model batch as analytical graphs"
+          >
+            <BarChart2 className="w-3 h-3 text-cyan-400" />
+            <span>See as graphs</span>
+          </button>
+          <span className="px-2 py-0.5 rounded bg-slate-950/80 text-slate-400 border border-slate-800 text-[11px]">
+            {cfg.arch}
+          </span>
+        </div>
       </div>
 
       {/* Grid: 4x4, Square aspect ratio filling the card, at least 480px on desktop */}
@@ -165,6 +179,8 @@ export default function GenerativeLab({
   const [modelTiles, setModelTiles] = useState({ vae: [], wgan: [], ddpm: [] });
   const [computedMetrics, setComputedMetrics] = useState({ vae: null, wgan: null, ddpm: null });
   const [runHistory, setRunHistory] = useState([]);
+  const [viewMode, setViewMode] = useViewMode('images');
+  const [activeLightbox, setActiveLightbox] = useState(null);
 
   const randomiseSeed = () => setSeed(Math.floor(Math.random() * 100000));
 
@@ -463,28 +479,52 @@ export default function GenerativeLab({
           )}
         </div>
 
-        {/* ── Mode badge + status: Active sample ── */}
-        {runResult && (
-          <div className="flex items-center justify-between flex-wrap gap-2 text-xs font-mono text-slate-300 bg-slate-900/60 p-3 rounded-2xl border border-slate-800">
-            <span>
-              <strong>Active sample:</strong> seed {runResult.seed} · steps {runResult.steps} · w = {runResult.cfg} · class = {runResult.class}
-            </span>
-            <ModeBadge mode={mode} />
+        {/* ── Mode badge, status, and [Images] [Graphs] switch ── */}
+        <div className="flex items-center justify-between flex-wrap gap-3 bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
+          <div className="flex items-center space-x-3 text-xs font-mono text-slate-300">
+            {runResult ? (
+              <span>
+                <strong>Active sample:</strong> seed {runResult.seed} · steps {runResult.steps} · w = {runResult.cfg} · class = {runResult.class}
+              </span>
+            ) : (
+              <span>Ready to sample</span>
+            )}
+            {runResult && <ModeBadge mode={mode} />}
           </div>
+
+          <ViewModeSwitch mode={viewMode} setMode={setViewMode} />
+        </div>
+
+        {/* ── Three grid cards (Images view) OR Analytical Graphs (Graphs view) ── */}
+        {viewMode === 'images' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {['vae', 'wgan', 'ddpm'].map(k => (
+              <ModelGridCard
+                key={k}
+                modelKey={k}
+                runData={runResult}
+                isLoading={isLoading}
+                tiles={modelTiles[k]}
+                onFlipToGraphs={() => setViewMode('graphs')}
+              />
+            ))}
+          </div>
+        ) : (
+          <LiveLabGraphsView
+            tilesMap={modelTiles}
+            runResult={runResult}
+            runHistory={runHistory}
+            onTileClick={(tileUrl, idx) => setActiveLightbox({ src: tileUrl, label: `Tile ${idx + 1}` })}
+          />
         )}
 
-        {/* ── Three grid cards: 16 tiles each, square aspect ratio ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {['vae', 'wgan', 'ddpm'].map(k => (
-            <ModelGridCard
-              key={k}
-              modelKey={k}
-              runData={runResult}
-              isLoading={isLoading}
-              tiles={modelTiles[k]}
-            />
-          ))}
-        </div>
+        {activeLightbox && (
+          <Lightbox
+            src={activeLightbox.src}
+            label={activeLightbox.label}
+            onClose={() => setActiveLightbox(null)}
+          />
+        )}
 
         {/* ── Output Analysis Panel (Section C) ── */}
         <OutputAnalysisPanel

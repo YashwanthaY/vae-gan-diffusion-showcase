@@ -1,9 +1,12 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { Play, Pause, X, Download, AlertTriangle, CheckCircle2, RotateCcw, Shuffle, Layers } from 'lucide-react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { Play, Pause, X, Download, AlertTriangle, CheckCircle2, RotateCcw, Shuffle, Layers, BarChart2 } from 'lucide-react';
 import { generateStudio } from '../services/gradioClient.js';
 import { GRID, TILE, CIFAR10_CLASSES } from '../config.js';
 import { assemble16Tiles } from '../utils/tileAssembler.js';
 import TileGrid from './TileGrid.jsx';
+import ViewModeSwitch from './ViewModeSwitch.jsx';
+import useViewMode from '../hooks/useViewMode.js';
+import { getImageDataFromUrl, pairwiseDiversity, laplacianVariance, colourfulness } from '../lib/imageStats.js';
 
 /**
  * Robustly slice a 4x4 image (base64, data-URL, or local path) into 16 exact 32x32 PNGs.
@@ -128,8 +131,34 @@ export default function OutputsTab5Datasets({ studioSliders }) {
   const [lastBatchTiles, setLastBatchTiles]   = useState([]);
   const [error,     setError]                 = useState(null);
   const [zipReady,  setZipReady]              = useState(null);
+  const [viewMode, setViewMode]               = useViewMode('images');
+  const [batchStats, setBatchStats]           = useState(null);
   const cancelRef   = useRef(false);
   const pauseRef    = useRef(false);
+
+  // Compute live analytical statistics on the latest generated batch
+  useEffect(() => {
+    if (!lastBatchTiles || lastBatchTiles.length === 0) return;
+    let active = true;
+    Promise.all(lastBatchTiles.map(t => getImageDataFromUrl(t)))
+      .then(imgDataArr => {
+        if (!active) return;
+        const valid = imgDataArr.filter(Boolean);
+        if (valid.length === 0) return;
+        const diversity = pairwiseDiversity(valid);
+        const variances = valid.map(v => laplacianVariance(v));
+        const meanVariance = variances.reduce((a, b) => a + b, 0) / variances.length;
+        const colours = valid.map(v => colourfulness(v));
+        const meanColour = colours.reduce((a, b) => a + b, 0) / colours.length;
+        setBatchStats({
+          diversity,
+          meanVariance,
+          meanColour,
+        });
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [lastBatchTiles]);
 
   const toggleClass = useCallback((id) => {
     setSelectedClasses(prev =>
@@ -440,31 +469,101 @@ export default function OutputsTab5Datasets({ studioSliders }) {
         {/* Right Column: Live 4×4 Preview & Progress (5 cols on lg) */}
         <div className="lg:col-span-5 flex flex-col justify-between space-y-4 border-t lg:border-t-0 lg:border-l border-slate-800/80 pt-4 lg:pt-0 lg:pl-6">
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <h5 className="text-sm font-bold text-white font-mono flex items-center space-x-2">
                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                <span>Latest Batch 4×4 Preview</span>
+                <span>Latest Batch Analysis</span>
               </h5>
-              <span className="text-[10px] font-mono text-slate-400">
-                16 tiles (32×32)
-              </span>
+              <ViewModeSwitch mode={viewMode} setMode={setViewMode} />
             </div>
 
-            {/* 4x4 Preview Box */}
-            <div className="w-full aspect-square max-w-[360px] mx-auto rounded-xl border border-slate-800 bg-slate-900/60 p-1 flex items-center justify-center overflow-hidden">
-              {lastBatchTiles.length > 0 ? (
-                <TileGrid tiles={lastBatchTiles} rows={4} cols={4} isLoading={building && lastBatchTiles.length === 0} />
-              ) : (
-                <div className="text-center p-6 space-y-2">
-                  <div className="w-12 h-12 mx-auto rounded-xl bg-slate-800/80 border border-slate-700 flex items-center justify-center text-slate-400">
-                    <Layers className="w-6 h-6" />
+            {/* Display either 4x4 Images Preview or Analytical Graphs */}
+            {viewMode === 'images' ? (
+              <div className="w-full aspect-square max-w-[360px] mx-auto rounded-xl border border-slate-800 bg-slate-900/60 p-1 flex items-center justify-center overflow-hidden">
+                {lastBatchTiles.length > 0 ? (
+                  <TileGrid tiles={lastBatchTiles} rows={4} cols={4} isLoading={building && lastBatchTiles.length === 0} />
+                ) : (
+                  <div className="text-center p-6 space-y-2">
+                    <div className="w-12 h-12 mx-auto rounded-xl bg-slate-800/80 border border-slate-700 flex items-center justify-center text-slate-400">
+                      <Layers className="w-6 h-6" />
+                    </div>
+                    <p className="text-xs font-mono text-slate-400">
+                      Click "Build Dataset" to generate batches of 16 images in real time.
+                    </p>
                   </div>
-                  <p className="text-xs font-mono text-slate-400">
-                    Click "Build Dataset" to generate batches of 16 images in real time.
-                  </p>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            ) : (
+              <div className="w-full aspect-square max-w-[360px] mx-auto rounded-xl border border-slate-800 bg-slate-950 p-4 flex flex-col justify-between overflow-y-auto font-mono text-xs">
+                {lastBatchTiles.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="font-bold text-cyan-300">Live Batch CV Metrics</span>
+                      <span className="text-[10px] text-slate-500">N=16 tiles (32×32)</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                        <div className="text-[10px] text-slate-500">Pairwise L2 Diversity:</div>
+                        <div className="text-cyan-400 font-bold text-sm">
+                          {batchStats ? batchStats.diversity.toFixed(4) : '…'}
+                        </div>
+                        <div className="text-[9px] text-slate-500 mt-0.5">Higher = broader modes</div>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                        <div className="text-[10px] text-slate-500">Laplacian Sharpness:</div>
+                        <div className="text-emerald-400 font-bold text-sm">
+                          {batchStats ? batchStats.meanVariance.toFixed(2) : '…'}
+                        </div>
+                        <div className="text-[9px] text-slate-500 mt-0.5">Edge energy / variance</div>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 col-span-2">
+                        <div className="text-[10px] text-slate-500">Colorfulness (Hasler-Süsstrunk):</div>
+                        <div className="text-amber-400 font-bold text-sm">
+                          {batchStats ? batchStats.meanColour.toFixed(2) : '…'}
+                        </div>
+                        <div className="text-[9px] text-slate-500 mt-0.5">Combined chromatic saturation</div>
+                      </div>
+                    </div>
+
+                    {/* Class balance breakdown */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="text-[10px] text-slate-400 font-bold">Class Allocation Distribution</div>
+                      <div className="space-y-1">
+                        {selectedClasses.map(id => {
+                          const cls = CIFAR10_CLASSES[id];
+                          const cur = progress?.classCounts?.[cls.name] || 0;
+                          const pct = Math.min(100, Math.round((cur / imagesPerClass) * 100));
+                          return (
+                            <div key={id} className="space-y-0.5">
+                              <div className="flex justify-between text-[10px] text-slate-400">
+                                <span>{cls.name}</span>
+                                <span>{cur} / {imagesPerClass} ({pct}%)</span>
+                              </div>
+                              <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                                <div
+                                  className="bg-cyan-400 h-full rounded-full transition-all duration-300"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center p-6 space-y-2 my-auto">
+                    <BarChart2 className="w-8 h-8 text-cyan-400 mx-auto" />
+                    <p className="text-xs text-slate-400">
+                      Generate a batch to inspect analytical CV metrics and class distributions.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Progress & Class Counters */}
