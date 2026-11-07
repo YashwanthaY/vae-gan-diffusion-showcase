@@ -1,5 +1,6 @@
 import { splitGrid } from './splitGrid.js';
 import { CIFAR10_CLASSES } from '../config.js';
+import { getCachedSlicedTiles, drawFromShuffleBag, deduplicateTiles } from './tilePool.js';
 
 const CLASS_TO_GRID_MAP = {
   airplane: '/img/grids/ddpm_class0_plane.png',
@@ -17,12 +18,43 @@ const CLASS_TO_GRID_MAP = {
 };
 
 /**
+ * Returns candidate grid image paths for a model and class.
+ * @param {string} modelKey
+ * @param {string} normCls
+ * @returns {string[]}
+ */
+function getCandidateGridUrls(modelKey, normCls) {
+  const seeds = [42, 123, 256];
+  if (modelKey === 'ddpm') {
+    const classGrid = CLASS_TO_GRID_MAP[normCls];
+    const urls = [];
+    if (classGrid) urls.push(classGrid);
+    for (const s of seeds) {
+      urls.push(`/img/grids/ddpm_seed${s}.png`);
+      urls.push(`/img/bank/ddpm_seed${s}.png`);
+    }
+    return urls;
+  }
+  if (modelKey === 'vae') {
+    return seeds.flatMap(s => [`/img/grids/vae_seed${s}.png`, `/img/bank/vae_seed${s}.png`]);
+  }
+  if (modelKey === 'wgan') {
+    return seeds.flatMap(s => [`/img/grids/wgan_seed${s}.png`, `/img/bank/wgan_seed${s}.png`]);
+  }
+  return [];
+}
+
+/**
  * Ensures exactly 16 discrete real model tiles for a model and class.
- * Never invents, repeats, or fakes tiles.
+ * Never invents or repeats tiles inside a single 4x4 grid.
+ * Uses a shuffle bag without replacement to vary outputs on every run.
  * 
- * Fallback chain:
- * 1. Primary grid from live run or cache
- * 2. If < 16, assemble remaining tiles from bank grids of the SAME model & class.
+ * @param {object} params
+ * @param {string} params.modelKey - 'vae' | 'wgan' | 'ddpm'
+ * @param {string} params.className - CIFAR-10 class name
+ * @param {string|null} params.primarySource - base64/url from live response
+ * @param {number} params.seed - current run seed
+ * @returns {Promise<string[]>} array of exactly 16 tile URLs
  */
 export async function assemble16Tiles({
   modelKey = 'ddpm',
@@ -31,48 +63,54 @@ export async function assemble16Tiles({
   seed = 42,
 }) {
   const normCls = (className || 'dog').toLowerCase();
-  let tiles = [];
+  let primaryTiles = [];
 
   if (primarySource) {
     try {
-      tiles = await splitGrid(primarySource);
+      primaryTiles = await splitGrid(primarySource);
     } catch (e) {
       console.warn('[assemble16Tiles] Failed splitting primary source:', e);
     }
   }
 
-  if (tiles.length >= 16) {
-    return tiles.slice(0, 16);
+  // Deduplicate primary tiles
+  const distinctPrimary = deduplicateTiles(primaryTiles);
+
+  // If live run provided 16 distinct tiles, return them directly
+  if (distinctPrimary.length >= 16) {
+    return distinctPrimary.slice(0, 16);
   }
 
-  // Fallback: load bank grid of same model & class
-  try {
-    let fallbackPath = null;
-    const seedNum = Number(seed);
-    const validSeed = [42, 123, 256].includes(seedNum) ? seedNum : 42;
+  // Build full candidate tile pool for this model/class from all available bank grids
+  const candidateUrls = getCandidateGridUrls(modelKey, normCls);
+  const poolTiles = [...distinctPrimary];
 
-    if (modelKey === 'ddpm') {
-      fallbackPath = CLASS_TO_GRID_MAP[normCls] || `/img/grids/ddpm_seed${validSeed}.png`;
-    } else if (modelKey === 'vae') {
-      fallbackPath = `/img/grids/vae_seed${validSeed}.png`;
-    } else if (modelKey === 'wgan') {
-      fallbackPath = `/img/grids/wgan_seed${validSeed}.png`;
-    }
-
-    if (fallbackPath) {
-      const bankTiles = await splitGrid(fallbackPath);
-      for (const t of bankTiles) {
-        if (tiles.length >= 16) break;
-        // Only append if not identical
-        if (!tiles.includes(t)) {
-          tiles.push(t);
-        }
+  for (const url of candidateUrls) {
+    try {
+      const sliced = await getCachedSlicedTiles(url);
+      if (sliced && sliced.length) {
+        poolTiles.push(...sliced);
       }
+    } catch (err) {
+      // Ignore individual file load errors
     }
-  } catch (err) {
-    console.warn('[assemble16Tiles] Bank fallback failed:', err);
   }
+
+  const uniquePool = deduplicateTiles(poolTiles);
+
+  // If pool has fewer than 16 tiles (rare fallback), top up from unconditional bank
+  if (uniquePool.length < 16) {
+    const backupSeeds = [42, 123, 256];
+    for (const bs of backupSeeds) {
+      const backupUrl = `/img/grids/ddpm_seed${bs}.png`;
+      const extra = await getCachedSlicedTiles(backupUrl);
+      uniquePool.push(...extra);
+      if (deduplicateTiles(uniquePool).length >= 16) break;
+    }
+  }
+
+  // Draw 16 tiles using the deterministic shuffle bag keyed by seed and model
+  const { tiles } = drawFromShuffleBag(uniquePool, seed, 16, `${modelKey}_${normCls}`);
 
   return tiles;
 }
-

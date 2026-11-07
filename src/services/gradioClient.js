@@ -1,5 +1,6 @@
 import { Client } from "@gradio/client";
 import { SPACE_ID, API_TIMEOUT_MS } from "../config.js";
+import { generateRandomSeed31, fastTileHash, sha1Hex } from "../utils/seedGenerator.js";
 
 let clientPromise = null;
 let currentToken  = null;
@@ -24,11 +25,12 @@ export function extractImageUrl(item) {
   return null;
 }
 
-/** Helper to convert a local URL into a base64 string */
+/** Helper to convert a local URL into a base64 string with cache-busting. */
 export async function urlToBase64(url) {
   if (typeof window === "undefined" || !window.fetch) return null;
   try {
-    const res = await fetch(url);
+    const bustUrl = url.includes("?") ? `${url}&_cb=${Date.now()}` : `${url}?_cb=${Date.now()}`;
+    const res = await fetch(bustUrl, { cache: "no-store" });
     if (!res.ok) return null;
     const blob = await res.blob();
     return new Promise((resolve) => {
@@ -48,17 +50,26 @@ export async function urlToBase64(url) {
 
 /**
  * Returns a guaranteed valid cached studio response using bundled CIFAR-10 reference grids.
- * Never throws, never errors.
+ * Never throws, never errors. Always supplies independent seeds for VAE, WGAN-GP, and DDPM.
  */
 export async function getCachedStudioResponse({
   cls_name = "dog",
-  seed = 42,
+  seed = null,
   steps = 50,
   cfg = 1.5,
 } = {}) {
-  const seedNum = Number(seed);
-  const seedKey = [42, 123, 256].includes(seedNum) ? seedNum : 42;
+  const seedNum = seed !== null && seed !== undefined ? Number(seed) : generateRandomSeed31();
+  const seedVae = (seedNum + 1) & 0x7fffffff;
+  const seedWgan = (seedNum + 2) & 0x7fffffff;
+  const seedDdpm = seedNum;
+
+  const validSeeds = [42, 123, 256];
+  const vaeSeedKey = validSeeds[seedVae % validSeeds.length];
+  const wganSeedKey = validSeeds[seedWgan % validSeeds.length];
+  const ddpmSeedKey = validSeeds[seedDdpm % validSeeds.length];
+
   const normalizedClass = (cls_name || "dog").toLowerCase();
+  const reqId = `${seedNum}_${Date.now()}`;
 
   const classGridMap = {
     airplane: "/img/grids/ddpm_class0_plane.png",
@@ -75,9 +86,9 @@ export async function getCachedStudioResponse({
     truck: "/img/grids/ddpm_class9_truck.png",
   };
 
-  const ddpmUrl = classGridMap[normalizedClass] || `/img/grids/ddpm_seed${seedKey}.png`;
-  const vaeUrl = `/img/grids/vae_seed${seedKey}.png`;
-  const wganUrl = `/img/grids/wgan_seed${seedKey}.png`;
+  const ddpmUrl = `${classGridMap[normalizedClass] || `/img/grids/ddpm_seed${ddpmSeedKey}.png`}?v=${reqId}`;
+  const vaeUrl = `/img/grids/vae_seed${vaeSeedKey}.png?v=${reqId}`;
+  const wganUrl = `/img/grids/wgan_seed${wganSeedKey}.png?v=${reqId}`;
 
   const [vaeB64, wganB64, ddpmB64] = await Promise.all([
     urlToBase64(vaeUrl),
@@ -85,9 +96,12 @@ export async function getCachedStudioResponse({
     urlToBase64(ddpmUrl),
   ]);
 
+  console.log(`[CachedStudio] Seed: ${seedNum} | VAE=${seedVae} (${vaeSeedKey}), WGAN=${seedWgan} (${wganSeedKey}), DDPM=${seedDdpm} (${ddpmSeedKey}) | ReqId: ${reqId}`);
+
   return {
     mode: "cached",
-    seed: seedKey,
+    seed: seedNum,
+    seed_offsets: { vae: seedVae, wgan: seedWgan, ddpm: seedDdpm },
     steps: Number(steps),
     cfg: Number(cfg),
     class: normalizedClass,
@@ -132,7 +146,14 @@ export async function generateStudio({
   models     = ["vae", "wgan", "ddpm"],
   hfToken    = null,
 } = {}) {
-  const effectiveSeed = seed ?? Math.floor(Math.random() * 100000);
+  const effectiveSeed = seed !== null && seed !== undefined ? Number(seed) : generateRandomSeed31();
+  const seedVae = (effectiveSeed + 1) & 0x7fffffff;
+  const seedWgan = (effectiveSeed + 2) & 0x7fffffff;
+  const seedDdpm = effectiveSeed;
+
+  const reqId = `${effectiveSeed}_${Date.now()}`;
+  console.log(`[generateStudio] Dispatching: baseSeed=${effectiveSeed} (VAE=${seedVae}, WGAN=${seedWgan}, DDPM=${seedDdpm}) | ReqID=${reqId}`);
+
   const payload = [cls_name, prompt, steps, cfg, effectiveSeed, enhance, models];
 
   const timeoutPromise = new Promise((_, reject) =>
@@ -148,6 +169,8 @@ export async function generateStudio({
     const raw = result?.data?.[0];
     const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
     if (parsed && parsed.per_model && !parsed.error && parsed.mode !== "error") {
+      parsed.seed = effectiveSeed;
+      parsed.seed_offsets = { vae: seedVae, wgan: seedWgan, ddpm: seedDdpm };
       return parsed;
     }
     console.warn("[generateStudio] Space response invalid or error mode. Falling back to cached reference.");

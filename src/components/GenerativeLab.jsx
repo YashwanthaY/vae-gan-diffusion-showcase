@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, RefreshCw, Zap, Key, X, Download, ExternalLink,
-  Cpu, Cloud, Image as ImageIcon, Shuffle, Maximize2, ChevronDown, BarChart2
+  Cpu, Cloud, Image as ImageIcon, Shuffle, Maximize2, ChevronDown, BarChart2, Lock, Unlock
 } from 'lucide-react';
 import { GRID, DEFAULTS, CIFAR10_CLASSES, resolvePromptToClass } from '../config.js';
 import { generateStudio, getCachedStudioResponse } from '../services/gradioClient.js';
@@ -14,6 +14,7 @@ import OutputAnalysisPanel from './OutputAnalysisPanel.jsx';
 import LiveLabGraphsView from './LiveLabGraphsView.jsx';
 import ViewModeSwitch from './ViewModeSwitch.jsx';
 import useViewMode from '../hooks/useViewMode.js';
+import { generateRandomSeed31, fastTileHash } from '../utils/seedGenerator.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -85,7 +86,7 @@ const MODEL_CFG = {
   ddpm: { label: 'DDPM',     color: 'cyan',    border: 'border-cyan-500/40',   tag: 'glass-card-ddpm', arch: '28.01 M UNet' },
 };
 
-function ModelGridCard({ modelKey, runData, isLoading, tiles = [], onFlipToGraphs }) {
+function ModelGridCard({ modelKey, runData, isLoading, tiles = [], onFlipToGraphs, batchNum = 1, modelSeed = 42 }) {
   const [lightboxTile, setLightboxTile] = useState(null);
   const cfg = MODEL_CFG[modelKey];
   const data = runData?.per_model?.[modelKey];
@@ -123,15 +124,18 @@ function ModelGridCard({ modelKey, runData, isLoading, tiles = [], onFlipToGraph
         />
       </div>
 
-      {/* Grid footer specs */}
-      <div className="flex items-center justify-between text-xs font-mono text-slate-400 pt-1">
+      {/* Grid footer specs + batch & seed badge */}
+      <div className="flex items-center justify-between flex-wrap gap-1 text-xs font-mono text-slate-400 pt-1">
         <span>{GRID.n} images (4×4) · {data?.seconds?.toFixed(3) ?? '?'}s · passes {modelKey === 'ddpm' ? (runData?.cfg > 0 ? (runData?.steps ?? 50) * 2 : (runData?.steps ?? 50)) : 1}</span>
+        <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700/80 text-cyan-300 text-[10px] font-bold">
+          new batch #{batchNum} · seed {modelSeed}
+        </span>
       </div>
 
       {lightboxTile && (
         <Lightbox
           src={lightboxTile}
-          label={`${cfg.label} · seed ${runData?.seed ?? 42} · 32×32 pixel tile`}
+          label={`${cfg.label} · seed ${modelSeed} · 32×32 pixel tile`}
           onClose={() => setLightboxTile(null)}
         />
       )}
@@ -182,7 +186,11 @@ export default function GenerativeLab({
   const [viewMode, setViewMode] = useViewMode('images');
   const [activeLightbox, setActiveLightbox] = useState(null);
 
-  const randomiseSeed = () => setSeed(Math.floor(Math.random() * 100000));
+  // Lock seed toggle and batch counter
+  const [lockSeed, setLockSeed] = useState(false);
+  const [batchNum, setBatchNum] = useState(1);
+
+  const randomiseSeed = () => setSeed(generateRandomSeed31());
 
   // Automatically load initial reference samples on mount so the studio is never empty
   useEffect(() => {
@@ -201,30 +209,41 @@ export default function GenerativeLab({
     const processTiles = async () => {
       const clsName = runResult.class || 'dog';
       const curSeed = runResult.seed || 42;
+      const seedOffsets = runResult.seed_offsets || {
+        ddpm: curSeed,
+        vae: (curSeed + 1) & 0x7fffffff,
+        wgan: (curSeed + 2) & 0x7fffffff,
+      };
 
       const [vaeTiles, wganTiles, ddpmTiles] = await Promise.all([
         assemble16Tiles({
           modelKey: 'vae',
           className: clsName,
           primarySource: runResult.per_model?.vae?.grid_png_b64,
-          seed: curSeed,
+          seed: seedOffsets.vae,
         }),
         assemble16Tiles({
           modelKey: 'wgan',
           className: clsName,
           primarySource: runResult.per_model?.wgan?.grid_png_b64,
-          seed: curSeed,
+          seed: seedOffsets.wgan,
         }),
         assemble16Tiles({
           modelKey: 'ddpm',
           className: clsName,
           primarySource: runResult.per_model?.ddpm?.grid_png_b64,
-          seed: curSeed,
+          seed: seedOffsets.ddpm,
         }),
       ]);
 
       if (!isMounted) return;
       setModelTiles({ vae: vaeTiles, wgan: wganTiles, ddpm: ddpmTiles });
+
+      // Console logging of real seed and tile SHA-1 hashes
+      console.log(`[Studio Batch #${batchNum}] Sourced for baseSeed=${curSeed}:`);
+      console.log(`  β-VAE (seed ${seedOffsets.vae}): ${vaeTiles.length} tiles, Hashes:`, vaeTiles.map(fastTileHash));
+      console.log(`  WGAN-GP (seed ${seedOffsets.wgan}): ${wganTiles.length} tiles, Hashes:`, wganTiles.map(fastTileHash));
+      console.log(`  DDPM (seed ${seedOffsets.ddpm}): ${ddpmTiles.length} tiles, Hashes:`, ddpmTiles.map(fastTileHash));
 
       // Compute mathematical metrics across 16 tiles
       const [vaeM, wganM, ddpmM] = await Promise.all([
@@ -254,7 +273,7 @@ export default function GenerativeLab({
 
     processTiles();
     return () => { isMounted = false; };
-  }, [runResult]);
+  }, [runResult, batchNum]);
 
   // Keyword prompt → class auto-update
   const promptResolved = resolvePromptToClass(prompt);
@@ -266,12 +285,18 @@ export default function GenerativeLab({
     setElapsed(0);
     timerRef.current = setInterval(() => setElapsed(p => p + 1), 1000);
 
+    const activeSeed = lockSeed ? Number(seed) : generateRandomSeed31();
+    if (!lockSeed) {
+      setSeed(activeSeed);
+    }
+    setBatchNum(b => b + 1);
+
     const result = await generateStudio({
       cls_name:   cls.name,
       prompt:     prompt,
       steps:      Number(steps),
       cfg:        Number(cfg),
-      seed:       Number(seed),
+      seed:       activeSeed,
       enhance:    Boolean(enhance),
       models:     ['vae', 'wgan', 'ddpm'],
       hfToken:    hfToken.trim() || null,
@@ -280,7 +305,25 @@ export default function GenerativeLab({
     clearInterval(timerRef.current);
     setIsLoading(false);
     setRunResult(result);
-  }, [cls, prompt, steps, cfg, seed, enhance, hfToken, setRunResult]);
+  }, [cls, prompt, steps, cfg, seed, lockSeed, enhance, hfToken, setSeed, setRunResult]);
+
+  // Keyboard shortcut: Pressing 'Enter' or 'R' triggers generation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = e.target?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) {
+        return;
+      }
+      if (e.key === 'r' || e.key === 'R' || e.key === 'Enter') {
+        e.preventDefault();
+        if (!isLoading) {
+          handleGenerate();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleGenerate, isLoading]);
 
   const mode = runResult?.mode ?? 'cached';
 
@@ -367,22 +410,42 @@ export default function GenerativeLab({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-mono text-slate-400">Seed:</label>
+              <div className="flex items-center justify-between text-xs font-mono">
+                <label className="text-slate-400">Seed:</label>
+                <span className="text-[10px] text-cyan-400">
+                  {lockSeed ? '🔒 Locked' : '🎲 Auto-draws fresh seed'}
+                </span>
+              </div>
               <div className="flex space-x-2">
                 <input
                   type="number"
                   value={seed}
                   onChange={e => setSeed(Number(e.target.value))}
                   className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs font-mono focus:border-cyan-500 outline-none"
+                  aria-label="Seed number"
                 />
                 <button
+                  type="button"
                   onClick={randomiseSeed}
                   className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                  title="Randomise Seed"
+                  title="Randomise Seed (31-bit)"
                 >
                   <Shuffle className="w-4 h-4" />
                 </button>
               </div>
+              <label className="flex items-center space-x-2 text-[11px] font-mono text-slate-300 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={lockSeed}
+                  onChange={e => setLockSeed(e.target.checked)}
+                  className="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500"
+                  aria-label="Lock seed"
+                />
+                <span className="flex items-center space-x-1">
+                  {lockSeed ? <Lock className="w-3 h-3 text-amber-400" /> : <Unlock className="w-3 h-3 text-slate-400" />}
+                  <span>Lock seed (reproducible runs)</span>
+                </span>
+              </label>
             </div>
           </div>
 
@@ -506,6 +569,8 @@ export default function GenerativeLab({
                 isLoading={isLoading}
                 tiles={modelTiles[k]}
                 onFlipToGraphs={() => setViewMode('graphs')}
+                batchNum={batchNum}
+                modelSeed={runResult?.seed_offsets?.[k] ?? runResult?.seed ?? 42}
               />
             ))}
           </div>
