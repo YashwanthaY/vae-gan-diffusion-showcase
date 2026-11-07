@@ -92,7 +92,11 @@ function ModelGridCard({ modelKey, runData, isLoading, tiles = [], onFlipToGraph
   const data = runData?.per_model?.[modelKey];
 
   return (
-    <div className={`p-5 rounded-3xl ${cfg.tag} border ${cfg.border} flex flex-col space-y-4 shadow-xl`}>
+    <div
+      id={`model-card-${modelKey}`}
+      data-model={modelKey}
+      className={`p-5 rounded-3xl ${cfg.tag} border ${cfg.border} flex flex-col space-y-4 shadow-xl`}
+    >
       {/* Header: Architecture facts + See as graphs button */}
       <div className="flex items-center justify-between text-xs font-mono">
         <span className={`font-bold text-sm text-${cfg.color}-300`}>{cfg.label}</span>
@@ -209,6 +213,7 @@ export default function GenerativeLab({
     const processTiles = async () => {
       const clsName = runResult.class || 'dog';
       const curSeed = runResult.seed || 42;
+      const isLive = runResult.mode === 'live';
       const seedOffsets = runResult.seed_offsets || {
         ddpm: curSeed,
         vae: (curSeed + 1) & 0x7fffffff,
@@ -221,18 +226,24 @@ export default function GenerativeLab({
           className: clsName,
           primarySource: runResult.per_model?.vae?.grid_png_b64,
           seed: seedOffsets.vae,
+          isLive,
+          isLocked: lockSeed,
         }),
         assemble16Tiles({
           modelKey: 'wgan',
           className: clsName,
           primarySource: runResult.per_model?.wgan?.grid_png_b64,
           seed: seedOffsets.wgan,
+          isLive,
+          isLocked: lockSeed,
         }),
         assemble16Tiles({
           modelKey: 'ddpm',
           className: clsName,
           primarySource: runResult.per_model?.ddpm?.grid_png_b64,
           seed: seedOffsets.ddpm,
+          isLive,
+          isLocked: lockSeed,
         }),
       ]);
 
@@ -302,9 +313,45 @@ export default function GenerativeLab({
       hfToken:    hfToken.trim() || null,
     });
 
+    const curSeed = result.seed || activeSeed;
+    const isLive = result.mode === 'live';
+    const seedOffsets = result.seed_offsets || {
+      ddpm: curSeed,
+      vae: (curSeed + 1) & 0x7fffffff,
+      wgan: (curSeed + 2) & 0x7fffffff,
+    };
+
+    const [vaeTiles, wganTiles, ddpmTiles] = await Promise.all([
+      assemble16Tiles({
+        modelKey: 'vae',
+        className: cls.name,
+        primarySource: result.per_model?.vae?.grid_png_b64,
+        seed: seedOffsets.vae,
+        isLive,
+        isLocked: lockSeed,
+      }),
+      assemble16Tiles({
+        modelKey: 'wgan',
+        className: cls.name,
+        primarySource: result.per_model?.wgan?.grid_png_b64,
+        seed: seedOffsets.wgan,
+        isLive,
+        isLocked: lockSeed,
+      }),
+      assemble16Tiles({
+        modelKey: 'ddpm',
+        className: cls.name,
+        primarySource: result.per_model?.ddpm?.grid_png_b64,
+        seed: seedOffsets.ddpm,
+        isLive,
+        isLocked: lockSeed,
+      }),
+    ]);
+
+    setModelTiles({ vae: vaeTiles, wgan: wganTiles, ddpm: ddpmTiles });
+    setRunResult(result);
     clearInterval(timerRef.current);
     setIsLoading(false);
-    setRunResult(result);
   }, [cls, prompt, steps, cfg, seed, lockSeed, enhance, hfToken, setSeed, setRunResult]);
 
   // Keyboard shortcut: Pressing 'Enter' or 'R' triggers generation
@@ -418,6 +465,7 @@ export default function GenerativeLab({
               </div>
               <div className="flex space-x-2">
                 <input
+                  id="seed-input"
                   type="number"
                   value={seed}
                   onChange={e => setSeed(Number(e.target.value))}
@@ -435,6 +483,7 @@ export default function GenerativeLab({
               </div>
               <label className="flex items-center space-x-2 text-[11px] font-mono text-slate-300 cursor-pointer pt-1">
                 <input
+                  id="lock-seed-checkbox"
                   type="checkbox"
                   checked={lockSeed}
                   onChange={e => setLockSeed(e.target.checked)}

@@ -71,6 +71,15 @@ export async function getCachedStudioResponse({
   const normalizedClass = (cls_name || "dog").toLowerCase();
   const reqId = `${seedNum}_${Date.now()}`;
 
+  const classShortMap = {
+    airplane: "plane",
+    plane: "plane",
+    automobile: "car",
+    car: "car",
+  };
+  const shortCls = classShortMap[normalizedClass] || normalizedClass;
+  const bankIdx = seedDdpm % 3;
+
   const classGridMap = {
     airplane: "/img/grids/ddpm_class0_plane.png",
     plane: "/img/grids/ddpm_class0_plane.png",
@@ -86,9 +95,10 @@ export async function getCachedStudioResponse({
     truck: "/img/grids/ddpm_class9_truck.png",
   };
 
-  const ddpmUrl = `${classGridMap[normalizedClass] || `/img/grids/ddpm_seed${ddpmSeedKey}.png`}?v=${reqId}`;
-  const vaeUrl = `/img/grids/vae_seed${vaeSeedKey}.png?v=${reqId}`;
-  const wganUrl = `/img/grids/wgan_seed${wganSeedKey}.png?v=${reqId}`;
+  // Select diverse bank grids across seeds for offline cached mode
+  const ddpmUrl = `/img/bank/ddpm_raw/${shortCls}_seed${bankIdx}.png?v=${reqId}`;
+  const vaeUrl = `/img/bank/vae/unconditional_seed${seedVae % 3}.png?v=${reqId}`;
+  const wganUrl = `/img/bank/wgan/unconditional_seed${seedWgan % 3}.png?v=${reqId}`;
 
   const [vaeB64, wganB64, ddpmB64] = await Promise.all([
     urlToBase64(vaeUrl),

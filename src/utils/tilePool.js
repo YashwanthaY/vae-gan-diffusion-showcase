@@ -10,6 +10,7 @@ import { fastTileHash } from './seedGenerator.js';
 // Session-level memory of tile hashes shown to the user
 const sessionSeenHashes = new Set();
 const lastBatchModelHashes = new Map();
+const lastBatchSeed = new Map();
 
 // In-memory cache of sliced tiles per image URL to avoid re-slicing
 const slicedTileCache = new Map();
@@ -77,15 +78,28 @@ export function deduplicateTiles(tiles) {
  * @param {number} seed - integer seed for deterministic shuffle
  * @param {number} count - number of tiles to draw (default 16)
  * @param {string} cacheKey - identifier for model/class tracking
+ * @param {boolean} isLocked - whether seed is locked for reproducible runs
  * @returns {{ tiles: string[], hashes: string[], exhausted: boolean }}
  */
-export function drawFromShuffleBag(pool, seed, count = 16, cacheKey = 'default') {
+export function drawFromShuffleBag(pool, seed, count = 16, cacheKey = 'default', isLocked = false) {
   const uniquePool = deduplicateTiles(pool);
   if (uniquePool.length === 0) {
     return { tiles: [], hashes: [], exhausted: true };
   }
 
   const prng = createPrng(seed);
+  const previousSeed = lastBatchSeed.get(cacheKey);
+
+  // If reproducibility requested (lockSeed is ON, or exact same seed re-requested)
+  if (isLocked || (previousSeed !== undefined && previousSeed === seed)) {
+    const shuffled = shuffleWithPrng(uniquePool, prng);
+    const chosenTiles = shuffled.slice(0, count);
+    const chosenHashes = chosenTiles.map(fastTileHash);
+    lastBatchModelHashes.set(cacheKey, new Set(chosenHashes));
+    lastBatchSeed.set(cacheKey, seed);
+    return { tiles: chosenTiles, hashes: chosenHashes, exhausted: false };
+  }
+
   const lastHashes = lastBatchModelHashes.get(cacheKey) || new Set();
 
   // Partition pool into unseen, seen, and immediate-last
@@ -139,6 +153,7 @@ export function drawFromShuffleBag(pool, seed, count = 16, cacheKey = 'default')
 
   // Record into last batch for this key
   lastBatchModelHashes.set(cacheKey, chosenSet);
+  lastBatchSeed.set(cacheKey, seed);
 
   return {
     tiles: chosenTiles,
@@ -173,5 +188,6 @@ export async function getCachedSlicedTiles(url) {
 export function resetSessionTileHistory() {
   sessionSeenHashes.clear();
   lastBatchModelHashes.clear();
+  lastBatchSeed.clear();
   slicedTileCache.clear();
 }

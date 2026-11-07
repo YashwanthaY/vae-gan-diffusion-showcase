@@ -17,6 +17,13 @@ const CLASS_TO_GRID_MAP = {
   truck: '/img/grids/ddpm_class9_truck.png',
 };
 
+const CLASS_SHORT_MAP = {
+  airplane: 'plane',
+  plane: 'plane',
+  automobile: 'car',
+  car: 'car',
+};
+
 /**
  * Returns candidate grid image paths for a model and class.
  * @param {string} modelKey
@@ -24,23 +31,52 @@ const CLASS_TO_GRID_MAP = {
  * @returns {string[]}
  */
 function getCandidateGridUrls(modelKey, normCls) {
+  const shortCls = CLASS_SHORT_MAP[normCls] || normCls;
+  const bankIndices = [0, 1, 2];
   const seeds = [42, 123, 256];
+
   if (modelKey === 'ddpm') {
-    const classGrid = CLASS_TO_GRID_MAP[normCls];
     const urls = [];
+    // 1. Direct class bank grids (raw & super-resolution: 48 + 48 = 96 distinct tiles)
+    for (const idx of bankIndices) {
+      urls.push(`/img/bank/ddpm_raw/${shortCls}_seed${idx}.png`);
+      urls.push(`/img/bank/ddpm_sr/${shortCls}_seed${idx}.png`);
+    }
+    // 2. Class grid
+    const classGrid = CLASS_TO_GRID_MAP[normCls];
     if (classGrid) urls.push(classGrid);
+    // 3. Seed grids
     for (const s of seeds) {
       urls.push(`/img/grids/ddpm_seed${s}.png`);
       urls.push(`/img/bank/ddpm_seed${s}.png`);
     }
     return urls;
   }
+
   if (modelKey === 'vae') {
-    return seeds.flatMap(s => [`/img/grids/vae_seed${s}.png`, `/img/bank/vae_seed${s}.png`]);
+    const urls = [];
+    for (const idx of bankIndices) {
+      urls.push(`/img/bank/vae/unconditional_seed${idx}.png`);
+    }
+    for (const s of seeds) {
+      urls.push(`/img/grids/vae_seed${s}.png`);
+      urls.push(`/img/bank/vae_seed${s}.png`);
+    }
+    return urls;
   }
+
   if (modelKey === 'wgan') {
-    return seeds.flatMap(s => [`/img/grids/wgan_seed${s}.png`, `/img/bank/wgan_seed${s}.png`]);
+    const urls = [];
+    for (const idx of bankIndices) {
+      urls.push(`/img/bank/wgan/unconditional_seed${idx}.png`);
+    }
+    for (const s of seeds) {
+      urls.push(`/img/grids/wgan_seed${s}.png`);
+      urls.push(`/img/bank/wgan_seed${s}.png`);
+    }
+    return urls;
   }
+
   return [];
 }
 
@@ -61,6 +97,8 @@ export async function assemble16Tiles({
   className = 'dog',
   primarySource = null,
   seed = 42,
+  isLive = false,
+  isLocked = false,
 }) {
   const normCls = (className || 'dog').toLowerCase();
   let primaryTiles = [];
@@ -76,8 +114,8 @@ export async function assemble16Tiles({
   // Deduplicate primary tiles
   const distinctPrimary = deduplicateTiles(primaryTiles);
 
-  // If live run provided 16 distinct tiles, return them directly
-  if (distinctPrimary.length >= 16) {
+  // If live run from Space ZeroGPU provided 16 distinct tiles, return them directly
+  if (isLive && distinctPrimary.length >= 16) {
     return distinctPrimary.slice(0, 16);
   }
 
@@ -110,7 +148,7 @@ export async function assemble16Tiles({
   }
 
   // Draw 16 tiles using the deterministic shuffle bag keyed by seed and model
-  const { tiles } = drawFromShuffleBag(uniquePool, seed, 16, `${modelKey}_${normCls}`);
+  const { tiles } = drawFromShuffleBag(uniquePool, seed, 16, `${modelKey}_${normCls}`, isLocked);
 
   return tiles;
 }
