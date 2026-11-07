@@ -7,6 +7,7 @@ import TileGrid from './TileGrid.jsx';
 import ViewModeSwitch from './ViewModeSwitch.jsx';
 import useViewMode from '../hooks/useViewMode.js';
 import { getImageDataFromUrl, pairwiseDiversity, laplacianVariance, colourfulness } from '../lib/imageStats.js';
+import { fastTileHash } from '../utils/seedGenerator.js';
 
 /**
  * Robustly slice a 4x4 image (base64, data-URL, or local path) into 16 exact 32x32 PNGs.
@@ -63,6 +64,8 @@ async function buildZip(batches, classNames, steps, cfg, seed) {
   const zip = new JSZip();
   const imgFolder = zip.folder('images');
   const labelRows = ['filename,class_index,class_name'];
+  const seenHashes = new Set();
+  let duplicateCount = 0;
   let totalCount = 0;
 
   for (const batch of batches) {
@@ -71,6 +74,13 @@ async function buildZip(batches, classNames, steps, cfg, seed) {
     const clsFolder = imgFolder.folder(cls.name);
     for (let i = 0; i < tiles.length; i++) {
       const dataUrl = tiles[i];
+      const h = fastTileHash(dataUrl);
+      if (seenHashes.has(h)) {
+        duplicateCount++;
+        continue; // Discard duplicate tile
+      }
+      seenHashes.add(h);
+
       const b64 = dataUrl.split(',')[1];
       if (b64) {
         const fname = `${batchSeed}_b${batchIdx}_${i}.png`;
@@ -92,6 +102,9 @@ async function buildZip(batches, classNames, steps, cfg, seed) {
     date: new Date().toISOString(),
     protocol_note: 'Standardized evaluation on CIFAR-10 32x32. Batch size 16 per grid. Free-tier Tesla T4 / ZeroGPU.',
     total_images: totalCount,
+    duplicates_detected_and_removed: duplicateCount,
+    duplicates_in_zip: 0,
+    deduplication_status: '0 duplicates (verified by hash)',
   }, null, 2));
 
   zip.file('README.txt', `PyTorch ImageFolder Dataset
@@ -201,7 +214,7 @@ export default function OutputsTab5Datasets({ studioSliders }) {
         }
         if (cancelRef.current) break;
 
-        const bSeed = buildSeed + b;
+        const bSeed = (buildSeed + b * 17 + clsIdx * 997 + 1) & 0x7fffffff;
         try {
           const result = await generateStudio({
             cls_name: cls.name,

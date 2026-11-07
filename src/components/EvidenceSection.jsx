@@ -37,7 +37,7 @@ export default function EvidenceSection({ activeTab: externalTab, setActiveTab: 
     assemble16Tiles({
       modelKey: 'ddpm',
       className: clsName,
-      seed: 42,
+      seed: (activeClassIdx * 73 + 42) & 0x7fffffff,
     }).then(tiles => {
       if (!isCancelled) {
         setClassTiles(tiles);
